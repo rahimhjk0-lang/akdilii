@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}الباقات{% endblock %}
+{% block content %}
+<div class="topbar">
+    <h5 class="mb-0 fw-700">💎 الباقات والأسعار</h5>
+</div>
+
+<div class="row g-4 justify-content-center">
+{% for key, plan in plans.items() %}
+<div class="col-md-4">
+    <div class="stat-card text-center {% if merchant.plan == key %}border border-success border-2{% endif %}">
+        {% if merchant.plan == key %}
+        <span class="badge bg-success mb-2">باقتك الحالية ✅</span>
+        {% endif %}
+        {% if key == 'enterprise' %}
+        <div class="mb-2">⭐⭐⭐</div>
+        {% elif key == 'business' %}
+        <div class="mb-2">💎</div>
+        {% elif key == 'pro' %}
+        <div class="mb-2">🥇</div>
+        {% elif key == 'growth' %}
+        <div class="mb-2">🥈</div>
+        {% else %}
+        <div class="mb-2">🥉</div>
+        {% endif %}
+        <h5 class="fw-800">{{ plan.name }}</h5>
+        <div class="display-6 fw-800 text-success my-3">{{ plan.price_dz }}</div>
+        <p class="text-muted">/شهر</p>
+        <hr>
+        <ul class="list-unstyled text-start">
+            <li class="mb-2">
+                <i class="fas fa-check text-success ms-2"></i>
+                {% if plan.orders == 99999 %}طرود بلا حدود{% else %}حتى {{ plan.orders }} طرد/شهر{% endif %}
+            </li>
+            <li class="mb-2"><i class="fas fa-check text-success ms-2"></i> إشعارات واتساب تلقائية</li>
+            <li class="mb-2"><i class="fas fa-check text-success ms-2"></i> SMS احتياطي ذكي</li>
+            <li class="mb-2"><i class="fas fa-check text-success ms-2"></i> جميع شركات التوصيل</li>
+            <li class="mb-2"><i class="fas fa-check text-success ms-2"></i> لوحة تحكم كاملة</li>
+            {% if key in ['pro', 'business', 'enterprise'] %}
+            <li class="mb-2"><i class="fas fa-check text-success ms-2"></i> تقارير وإحصائيات</li>
+            {% endif %}
+            {% if key in ['business', 'enterprise'] %}
+            <li class="mb-2"><i class="fas fa-check text-success ms-2"></i> دعم أولوية</li>
+            {% endif %}
+        </ul>
+        {% if merchant.plan != key %}
+        <button class="btn btn-primary-custom w-100 mt-2">
+            <i class="fas fa-arrow-up ms-1"></i> ترقية للباقة
+        </button>
+        {% else %}
+        <button class="btn btn-outline-success w-100 mt-2" disabled>باقتك الحالية</button>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}
