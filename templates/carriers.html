@@ -21,35 +21,14 @@
 
         {% if code in connected and connected[code].is_connected %}
             <p class="text-success small mb-3"><i class="fas fa-check-circle"></i> الحساب مربوط ويشتغل</p>
-            <button class="btn btn-outline-danger btn-sm w-100"
-                    onclick="disconnectCarrier('{{ code }}')">
+            <button class="btn btn-outline-danger btn-sm w-100" onclick="disconnectCarrier('{{ code }}')">
                 قطع الربط
             </button>
         {% else %}
-            {% if code == 'yalidine' %}
-            <!-- زر يفتح شرح Yalidine -->
-            <p class="text-muted small mb-3">اربط حسابك في Yalidine Express</p>
-            <button class="btn btn-primary-custom w-100 btn-sm"
-                    onclick="openYalidineModal()">
-                <i class="fas fa-link ms-1"></i> ربط حساب Yalidine
+            <p class="text-muted small mb-3">{{ info.name }} — اربط حسابك</p>
+            <button class="btn btn-primary-custom w-100 btn-sm" onclick="openModal('{{ code }}')">
+                <i class="fas fa-link ms-1"></i> ربط {{ info.name }}
             </button>
-            {% else %}
-            <!-- باقي الشركات: فورم إيميل + كلمة سر -->
-            <form onsubmit="connectCarrier(event, '{{ code }}')">
-                <input type="hidden" name="carrier_code" value="{{ code }}">
-                <div class="mb-2">
-                    <input type="email" name="email" class="form-control form-control-sm"
-                           placeholder="إيميل {{ info.name }}" required>
-                </div>
-                <div class="mb-3">
-                    <input type="password" name="password" class="form-control form-control-sm"
-                           placeholder="كلمة السر" required>
-                </div>
-                <button type="submit" class="btn btn-primary-custom w-100 btn-sm">
-                    <i class="fas fa-link ms-1"></i> ربط الحساب
-                </button>
-            </form>
-            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -58,94 +37,37 @@
 
 
 <!-- ============================================================ -->
-<!-- MODAL شرح Yalidine خطوة بخطوة                              -->
+<!-- MODAL عام لكل الشركات                                        -->
 <!-- ============================================================ -->
-<div class="modal fade" id="yalidineModal" tabindex="-1">
+<div class="modal fade" id="carrierModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content" style="border-radius:16px; overflow:hidden;">
-
-      <!-- Header -->
       <div class="modal-header" style="background:#1a1a2e; border:none;">
-        <h5 class="modal-title text-white fw-700">
-            🔑 كيف تربط حسابك في Yalidine؟
-        </h5>
+        <h5 class="modal-title text-white fw-700" id="modalTitle">🔑 ربط شركة التوصيل</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-
-      <!-- Body -->
       <div class="modal-body p-4">
 
-        <!-- خطوات -->
-        <div class="mb-4">
-            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات بسيطة:</h6>
-
-            <!-- خطوة 1 -->
-            <div class="d-flex gap-3 mb-3 p-3" style="background:#f8f5f0; border-radius:12px; border-right:4px solid #c9a96e;">
-                <div class="fw-700 fs-4" style="color:#c9a96e; min-width:40px;">1</div>
-                <div>
-                    <p class="fw-700 mb-1">دخل لحسابك في Yalidine</p>
-                    <p class="text-muted small mb-2">اذهب للرابط التالي وسجل الدخول بإيميلك وكلمة سرك:</p>
-                    <a href="https://app.yalidine.app" target="_blank"
-                       class="btn btn-sm" style="background:#c9a96e; color:white; border-radius:8px;">
-                        <i class="fas fa-external-link-alt ms-1"></i>
-                        app.yalidine.app
-                    </a>
-                </div>
-            </div>
-
-            <!-- خطوة 2 -->
-            <div class="d-flex gap-3 mb-3 p-3" style="background:#f8f5f0; border-radius:12px; border-right:4px solid #c9a96e;">
-                <div class="fw-700 fs-4" style="color:#c9a96e; min-width:40px;">2</div>
-                <div>
-                    <p class="fw-700 mb-1">روح لـ إعدادات API</p>
-                    <p class="text-muted small mb-2">بعد الدخول اضغط على:</p>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <span class="badge" style="background:#1a1a2e; font-size:13px; padding:6px 12px;">⚙️ الإعدادات</span>
-                        <span style="font-size:18px;">←</span>
-                        <span class="badge" style="background:#1a1a2e; font-size:13px; padding:6px 12px;">🔑 API / المطورون</span>
-                    </div>
-                    <p class="text-muted small mt-2 mb-0">
-                        أو اذهب مباشرة:
-                        <a href="https://app.yalidine.app/app/dev/index.php" target="_blank" style="color:#c9a96e;">
-                            app.yalidine.app/app/dev/index.php
-                        </a>
-                    </p>
-                </div>
-            </div>
-
-            <!-- خطوة 3 -->
-            <div class="d-flex gap-3 mb-3 p-3" style="background:#f8f5f0; border-radius:12px; border-right:4px solid #c9a96e;">
-                <div class="fw-700 fs-4" style="color:#c9a96e; min-width:40px;">3</div>
-                <div>
-                    <p class="fw-700 mb-1">انسخ API ID و API Token</p>
-                    <p class="text-muted small mb-2">ستجد رقمين — انسخهم وضعهم هنا:</p>
-                    <div class="p-2 mb-0" style="background:#1a1a2e; border-radius:8px; font-family:monospace; color:#c9a96e; font-size:13px;">
-                        API ID: <span style="color:white;">12345</span><br>
-                        API Token: <span style="color:white;">xxxxxxxxxxxxxxxx</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- خطوات مخصصة لكل شركة -->
+        <div id="modalSteps" class="mb-4"></div>
 
         <hr>
 
         <!-- الفورم -->
-        <form onsubmit="connectYalidine(event)">
-            <input type="hidden" name="carrier_code" value="yalidine">
+        <form onsubmit="connectCarrier(event)">
+            <input type="hidden" name="carrier_code" id="modalCarrierCode">
             <div class="row g-3">
-                <div class="col-md-5">
-                    <label class="form-label fw-700 small">API ID</label>
-                    <input type="text" name="email" id="yalidine_api_id"
-                           class="form-control" placeholder="مثال: 12345" required
-                           style="border-radius:10px;">
-                    <small class="text-muted">الرقم من لوحة Yalidine</small>
+                <div class="col-12" id="field1Wrap">
+                    <label class="form-label fw-700 small" id="field1Label">المعرّف / API ID</label>
+                    <input type="text" name="email" id="field1Input"
+                           class="form-control" required style="border-radius:10px;">
+                    <small class="text-muted" id="field1Hint"></small>
                 </div>
-                <div class="col-md-7">
-                    <label class="form-label fw-700 small">API Token</label>
-                    <input type="password" name="password" id="yalidine_api_token"
-                           class="form-control" placeholder="المفتاح السري الطويل" required
-                           style="border-radius:10px;">
-                    <small class="text-muted">Token من لوحة Yalidine</small>
+                <div class="col-12" id="field2Wrap">
+                    <label class="form-label fw-700 small" id="field2Label">المفتاح / API Token</label>
+                    <input type="password" name="password" id="field2Input"
+                           class="form-control" required style="border-radius:10px;">
+                    <small class="text-muted" id="field2Hint"></small>
                 </div>
             </div>
             <div class="alert alert-info mt-3 small py-2">
@@ -153,12 +75,10 @@
                 مفاتيحك محفوظة بأمان ولا نشاركها مع أي طرف ثالث 🔒
             </div>
             <div class="d-flex gap-2 mt-2">
-                <button type="submit" id="yalidine_btn"
-                        class="btn btn-primary-custom flex-grow-1">
-                    <i class="fas fa-link ms-1"></i> ربط Yalidine الحين
+                <button type="submit" id="connectBtn" class="btn btn-primary-custom flex-grow-1">
+                    <i class="fas fa-link ms-1"></i> ربط الحين
                 </button>
-                <button type="button" class="btn btn-outline-secondary"
-                        data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </form>
 
@@ -170,16 +90,194 @@
 
 {% block extra_js %}
 <script>
-// فتح modal ياليدين
-function openYalidineModal() {
-    new bootstrap.Modal(document.getElementById('yalidineModal')).show();
+// ============================================================
+// إعدادات كل شركة
+// ============================================================
+const CARRIERS_CONFIG = {
+    yalidine: {
+        title: "🔑 ربط Yalidine Express",
+        steps: `
+            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات:</h6>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">1</div>
+                <div>دخل لحسابك في Yalidine:
+                    <a href="https://yalidine.app" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">yalidine.app ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">2</div>
+                <div>روح مباشرة لصفحة API:
+                    <a href="https://yalidine.app/app/dev/index.php" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">صفحة API ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
+                <div>انسخ <strong>API ID</strong> و <strong>API Token</strong> وضعهم أدناه</div>
+            </div>`,
+        field1: { label: "API ID", placeholder: "مثال: 96179...", hint: "الرقم من لوحة Yalidine" },
+        field2: { label: "API Token", placeholder: "المفتاح الطويل", hint: "Token من لوحة Yalidine" },
+    },
+    zr_express: {
+        title: "🔑 ربط ZR Express",
+        steps: `
+            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات:</h6>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">1</div>
+                <div>دخل لحسابك في ZR Express:
+                    <a href="https://www.zrexpress.dz" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">zrexpress.dz ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">2</div>
+                <div>اذهب لـ <strong>الإعدادات → API</strong> أو <strong>Paramètres → Token</strong></div>
+            </div>
+            <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
+                <div>انسخ <strong>Token</strong> وضعه أدناه</div>
+            </div>`,
+        field1: { label: "إيميل ZR Express", placeholder: "example@email.com", hint: "إيميل حسابك في ZR Express" },
+        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في ZR Express" },
+    },
+    ecotrack: {
+        title: "🔑 ربط Ecotrack",
+        steps: `
+            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات:</h6>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">1</div>
+                <div>دخل لحسابك في Ecotrack:
+                    <a href="https://ecotrack.dz" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">ecotrack.dz ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">2</div>
+                <div>اذهب لـ <strong>Paramètres → API Key</strong></div>
+            </div>
+            <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
+                <div>انسخ <strong>API Key</strong> وضعه أدناه</div>
+            </div>`,
+        field1: { label: "إيميل Ecotrack", placeholder: "example@email.com", hint: "إيميل حسابك في Ecotrack" },
+        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Ecotrack" },
+    },
+    procolis: {
+        title: "🔑 ربط Procolis",
+        steps: `
+            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات:</h6>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">1</div>
+                <div>دخل لحسابك في Procolis:
+                    <a href="https://app.procolis.com" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">app.procolis.com ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">2</div>
+                <div>اذهب لـ <strong>Profil → Token API</strong></div>
+            </div>
+            <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
+                <div>انسخ <strong>Token</strong> وضعه أدناه</div>
+            </div>`,
+        field1: { label: "إيميل Procolis", placeholder: "example@email.com", hint: "إيميل حسابك في Procolis" },
+        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Procolis" },
+    },
+    maystro: {
+        title: "🔑 ربط Maystro Delivery",
+        steps: `
+            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات:</h6>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">1</div>
+                <div>دخل لحسابك في Maystro:
+                    <a href="https://app.maystro-delivery.com" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">maystro-delivery.com ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">2</div>
+                <div>اذهب لـ <strong>Paramètres → API</strong></div>
+            </div>
+            <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
+                <div>انسخ <strong>Token</strong> وضعه أدناه</div>
+            </div>`,
+        field1: { label: "إيميل Maystro", placeholder: "example@email.com", hint: "إيميل حسابك في Maystro" },
+        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Maystro" },
+    },
+    guepex: {
+        title: "🔑 ربط Guepex",
+        steps: `
+            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات:</h6>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">1</div>
+                <div>دخل لحسابك في Guepex:
+                    <a href="https://app.guepex.app" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">app.guepex.app ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">2</div>
+                <div>اذهب لـ <strong>Paramètres → API Token</strong></div>
+            </div>
+            <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
+                <div>انسخ <strong>Token</strong> وضعه أدناه</div>
+            </div>`,
+        field1: { label: "إيميل Guepex", placeholder: "example@email.com", hint: "إيميل حسابك في Guepex" },
+        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Guepex" },
+    },
+    ecom_delivery: {
+        title: "🔑 ربط E-com Delivery",
+        steps: `
+            <h6 class="fw-700 mb-3" style="color:#6b5a45;">📋 3 خطوات:</h6>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">1</div>
+                <div>دخل لحسابك في E-com Delivery:
+                    <a href="https://ecom-dz.com" target="_blank" class="btn btn-sm ms-2" style="background:#c9a96e;color:white;border-radius:8px;">ecom-dz.com ↗</a>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-2 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">2</div>
+                <div>اذهب لـ <strong>الإعدادات → API</strong> أو <strong>Développeurs</strong></div>
+            </div>
+            <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
+                <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
+                <div>انسخ <strong>Token</strong> وضعه أدناه</div>
+            </div>`,
+        field1: { label: "إيميل E-com Delivery", placeholder: "example@email.com", hint: "إيميل حسابك في E-com Delivery" },
+        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك" },
+    },
+};
+
+// ============================================================
+// فتح Modal
+// ============================================================
+function openModal(code) {
+    const cfg = CARRIERS_CONFIG[code];
+    if (!cfg) return;
+
+    document.getElementById('modalTitle').textContent      = cfg.title;
+    document.getElementById('modalSteps').innerHTML        = cfg.steps;
+    document.getElementById('modalCarrierCode').value      = code;
+
+    document.getElementById('field1Label').textContent     = cfg.field1.label;
+    document.getElementById('field1Input').placeholder     = cfg.field1.placeholder;
+    document.getElementById('field1Input').value           = '';
+    document.getElementById('field1Hint').textContent      = cfg.field1.hint;
+
+    document.getElementById('field2Label').textContent     = cfg.field2.label;
+    document.getElementById('field2Input').placeholder     = cfg.field2.placeholder;
+    document.getElementById('field2Input').value           = '';
+    document.getElementById('field2Hint').textContent      = cfg.field2.hint;
+
+    document.getElementById('connectBtn').innerHTML        = `<i class="fas fa-link ms-1"></i> ربط ${cfg.title.replace('🔑 ربط ', '')} الحين`;
+
+    new bootstrap.Modal(document.getElementById('carrierModal')).show();
 }
 
-// ربط ياليدين
-async function connectYalidine(e) {
+// ============================================================
+// ربط الشركة
+// ============================================================
+async function connectCarrier(e) {
     e.preventDefault();
     const form = e.target;
-    const btn  = document.getElementById('yalidine_btn');
+    const btn  = document.getElementById('connectBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin ms-1"></i> جاري الربط...';
 
@@ -188,39 +286,19 @@ async function connectYalidine(e) {
     const json = await resp.json();
 
     if (json.success) {
-        bootstrap.Modal.getInstance(document.getElementById('yalidineModal')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('carrierModal')).hide();
         alert('✅ ' + json.message);
         location.reload();
     } else {
         alert('❌ ' + json.error);
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-link ms-1"></i> ربط Yalidine الحين';
+        btn.innerHTML = '<i class="fas fa-link ms-1"></i> ربط الحين';
     }
 }
 
-// ربط باقي الشركات
-async function connectCarrier(e, code) {
-    e.preventDefault();
-    const form = e.target;
-    const btn  = form.querySelector('button[type=submit]');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin ms-1"></i> جاري الربط...';
-
-    const data = new FormData(form);
-    const resp = await fetch('/carriers/connect', { method: 'POST', body: data });
-    const json = await resp.json();
-
-    if (json.success) {
-        alert('✅ ' + json.message);
-        location.reload();
-    } else {
-        alert('❌ ' + json.error);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-link ms-1"></i> ربط الحساب';
-    }
-}
-
+// ============================================================
 // قطع الربط
+// ============================================================
 async function disconnectCarrier(code) {
     if (!confirm('⚠️ تأكيد قطع الربط؟')) return;
     const fd = new FormData();
