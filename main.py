@@ -1,5 +1,8 @@
 import os
 import uvicorn
+import requests
+import threading
+import time
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,10 +13,28 @@ from scheduler import start_scheduler, stop_scheduler
 from routes.auth import router as auth_router
 from routes.dashboard import router as dashboard_router
 
+# ==========================================
+# Keep-Alive — يمنع Render من النوم
+# ==========================================
+def keep_alive():
+    """ping كل 14 دقيقة باش ما ينامش"""
+    time.sleep(60)  # ننتظر دقيقة بعد البدء
+    while True:
+        try:
+            url = os.environ.get("APP_URL", "https://akdilii.onrender.com")
+            requests.get(f"{url}/health", timeout=10)
+            print("💓 Keep-alive ping")
+        except Exception:
+            pass
+        time.sleep(14 * 60)  # كل 14 دقيقة
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     start_scheduler()
+    # شغّل keep-alive في thread منفصل
+    t = threading.Thread(target=keep_alive, daemon=True)
+    t.start()
     print("🚀 Akdili شغال!")
     yield
     stop_scheduler()
@@ -46,7 +67,7 @@ async def health():
     return {"status": "OK", "app": "Akdili"}
 
 # ==========================================
-# تشغيل مباشر — مهم لـ Render!
+# تشغيل مباشر
 # ==========================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
