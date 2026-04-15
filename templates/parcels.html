@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}الطرود{% endblock %}
+{% block content %}
+<div class="topbar">
+    <h5 class="mb-0 fw-700">📦 كل الطرود</h5>
+    <span class="text-muted">{{ parcels|length }} طرد</span>
+</div>
+
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>رقم التتبع</th>
+                    <th>الزبون</th>
+                    <th>الهاتف</th>
+                    <th>نوع التوصيل</th>
+                    <th>الشركة</th>
+                    <th>الحالة</th>
+                    <th>الولاية</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in parcels %}
+            <tr onclick="window.location='/parcels/{{ p.id }}'" style="cursor:pointer;">
+                <td><code>{{ p.tracking_number }}</code></td>
+                <td>{{ p.customer_name }}</td>
+                <td>{{ p.customer_phone }}</td>
+                <td>
+                    {% if p.delivery_type == 'home' %}
+                    <span class="badge bg-info text-dark">🏠 منزل</span>
+                    {% else %}
+                    <span class="badge bg-secondary">🏢 مكتب</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.carrier %}
+                    <small>{{ p.carrier.carrier_name }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="status-badge badge-{{ p.current_status }}">
+                        {% if p.current_status == 'at_origin' %}📦 مكتب الإرسال
+                        {% elif p.current_status == 'in_transit' %}🚚 في الطريق
+                        {% elif p.current_status == 'at_destination' %}🏢 وصل المكتب
+                        {% elif p.current_status == 'out_for_delivery' %}🛵 عند الساعي
+                        {% elif p.current_status == 'delivered' %}✅ تم التسليم
+                        {% elif p.current_status == 'failed_attempt' %}⚠️ محاولة فاشلة
+                        {% elif p.current_status == 'returned' %}↩️ مرتجع
+                        {% endif %}
+                    </span>
+                </td>
+                <td>{{ p.wilaya or "—" }}</td>
+                <td><small class="text-muted">{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '—' }}</small></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-5">
+                    <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
+                    ما فيش طرود بعد
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
