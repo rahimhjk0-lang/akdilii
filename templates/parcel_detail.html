@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}تفاصيل الطرد{% endblock %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h5 class="mb-0 fw-700">📦 {{ parcel.tracking_number }}</h5>
+        <small class="text-muted">{{ parcel.customer_name }} — {{ parcel.customer_phone }}</small>
+    </div>
+    <a href="/parcels" class="btn btn-outline-secondary btn-sm">← رجوع</a>
+</div>
+
+<div class="row g-4">
+    <!-- معلومات الطرد -->
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <h6 class="fw-700 mb-3">معلومات الطرد</h6>
+            <table class="table table-borderless table-sm">
+                <tr><td class="text-muted">الزبون:</td><td><b>{{ parcel.customer_name }}</b></td></tr>
+                <tr><td class="text-muted">الهاتف:</td><td>{{ parcel.customer_phone }}</td></tr>
+                <tr><td class="text-muted">الشركة:</td><td>{{ parcel.carrier.carrier_name if parcel.carrier else '—' }}</td></tr>
+                <tr><td class="text-muted">نوع التوصيل:</td><td>
+                    {% if parcel.delivery_type == 'home' %}🏠 منزل{% else %}🏢 مكتب{% endif %}
+                </td></tr>
+                <tr><td class="text-muted">الولاية:</td><td>{{ parcel.wilaya or '—' }}</td></tr>
+                <tr><td class="text-muted">الحالة:</td><td>
+                    <span class="status-badge badge-{{ parcel.current_status }} small">
+                        {% if parcel.current_status == 'delivered' %}✅ تم التسليم
+                        {% elif parcel.current_status == 'in_transit' %}🚚 في الطريق
+                        {% elif parcel.current_status == 'at_origin' %}📦 مكتب الإرسال
+                        {% elif parcel.current_status == 'at_destination' %}🏢 وصل المكتب
+                        {% elif parcel.current_status == 'out_for_delivery' %}🛵 عند الساعي
+                        {% elif parcel.current_status == 'failed_attempt' %}⚠️ محاولة فاشلة
+                        {% elif parcel.current_status == 'returned' %}↩️ مرتجع
+                        {% endif %}
+                    </span>
+                </td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- تاريخ التتبع -->
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <h6 class="fw-700 mb-3">📍 تاريخ التتبع</h6>
+            {% for event in events %}
+            <div class="d-flex mb-3">
+                <div class="ms-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:35px;height:35px;background:#e8f5e9;flex-shrink:0;">
+                        <i class="fas fa-map-marker-alt text-success small"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="fw-600 small">
+                        {% if event.status == 'at_origin' %}📦 وصل مكتب الإرسال
+                        {% elif event.status == 'in_transit' %}🚚 في الطريق
+                        {% elif event.status == 'at_destination' %}🏢 وصل المكتب
+                        {% elif event.status == 'out_for_delivery' %}🛵 عند الساعي
+                        {% elif event.status == 'delivered' %}✅ تم التسليم
+                        {% elif event.status == 'failed_attempt' %}⚠️ محاولة فاشلة
+                        {% endif %}
+                    </div>
+                    {% if event.location %}<div class="text-muted small">{{ event.location }}</div>{% endif %}
+                    <div class="text-muted" style="font-size:0.75rem">
+                        {{ event.event_time.strftime('%d/%m/%Y %H:%M') if event.event_time else '' }}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted small">ما فيش تحديثات بعد</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- الإشعارات المرسلة -->
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <h6 class="fw-700 mb-3">📱 الإشعارات المرسلة</h6>
+            {% for n in notifs %}
+            <div class="d-flex align-items-center mb-2 p-2 rounded"
+                 style="background:{% if n.channel == 'whatsapp' %}#e8f5e9{% else %}#e3f2fd{% endif %}">
+                {% if n.channel == 'whatsapp' %}
+                <i class="fab fa-whatsapp text-success ms-2"></i>
+                <span class="small">واتساب — {{ n.sent_at.strftime('%H:%M') if n.sent_at else '' }}</span>
+                {% else %}
+                <i class="fas fa-sms text-primary ms-2"></i>
+                <span class="small">SMS — {{ n.sent_at.strftime('%H:%M') if n.sent_at else '' }}</span>
+                {% endif %}
+                <span class="badge {% if n.status == 'sent' %}bg-success{% else %}bg-danger{% endif %} me-auto small">
+                    {{ '✅' if n.status == 'sent' else '❌' }}
+                </span>
+            </div>
+            {% else %}
+            <p class="text-muted small">ما فيش إشعارات بعد</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
