@@ -1,3 +1,5 @@
+import os
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,38 +10,28 @@ from scheduler import start_scheduler, stop_scheduler
 from routes.auth import router as auth_router
 from routes.dashboard import router as dashboard_router
 
-# ==========================================
-# تشغيل وإيقاف التطبيق
-# ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # عند البداية
     init_db()
     start_scheduler()
-    print("🚀 Akdili — اكدلي شغال!")
+    print("🚀 Akdili شغال!")
     yield
-    # عند الإيقاف
     stop_scheduler()
-    print("⏹ Akdili وقف")
 
-# ==========================================
-# إنشاء التطبيق
-# ==========================================
 app = FastAPI(
-    title       = "Akdili — اكدلي",
-    description = "منصة تتبع الطرود والإشعارات التلقائية للتجار الجزائريين",
-    version     = "1.0.0",
-    lifespan    = lifespan
+    title    = "Akdili — اكدلي",
+    version  = "1.0.0",
+    lifespan = lifespan
 )
 
-# ---- الملفات الثابتة ----
+# static folder
+os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# ---- المسارات ----
+# routes
 app.include_router(auth_router)
 app.include_router(dashboard_router)
 
-# ---- الصفحة الرئيسية ----
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
@@ -51,4 +43,11 @@ async def home(request: Request):
 
 @app.get("/health")
 async def health():
-    return {"status": "✅ Akdili شغال", "version": "1.0.0"}
+    return {"status": "OK", "app": "Akdili"}
+
+# ==========================================
+# تشغيل مباشر — مهم لـ Render!
+# ==========================================
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
