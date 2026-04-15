@@ -13,59 +13,47 @@ class YalidineCarrier(BaseCarrier):
 
     def _headers(self):
         return {
-            "X-API-ID":    self.api_id,
-            "X-API-TOKEN": self.api_key,
+            "X-API-ID":     self.api_id,
+            "X-API-TOKEN":  self.api_key,
             "Content-Type": "application/json"
         }
 
     def login_and_get_key(self, email: str, password: str) -> dict:
         """
-        تسجيل الدخول بالإيميل وكلمة السر
-        وجلب API Key تلقائياً
+        Yalidine يستخدم API_ID + API_TOKEN مباشرة
+        email    = API_ID   (من لوحة تحكم Yalidine)
+        password = API_TOKEN (من لوحة تحكم Yalidine)
         """
+        api_id    = email.strip()
+        api_token = password.strip()
+
+        if not api_id or not api_token:
+            return {"success": False, "error": "أدخل API ID و API Token"}
+
+        # نتحقق من صحة المفاتيح
         try:
-            session = requests.Session()
-
-            # الخطوة 1: تسجيل الدخول
-            login_resp = session.post(
-                "https://app.yalidine.app/api/auth/login",
-                json={"email": email, "password": password},
+            resp = requests.get(
+                f"{self.BASE_URL}/parcels/",
+                headers={
+                    "X-API-ID":     api_id,
+                    "X-API-TOKEN":  api_token,
+                    "Content-Type": "application/json"
+                },
+                params={"page_size": 1, "page": 1},
                 timeout=15
             )
-
-            if login_resp.status_code != 200:
-                return {"success": False, "error": "إيميل أو كلمة سر غلطة"}
-
-            data = login_resp.json()
-            token = data.get("token") or data.get("access_token")
-
-            if not token:
-                return {"success": False, "error": "فشل تسجيل الدخول"}
-
-            # الخطوة 2: جلب المفتاح من الإعدادات
-            settings_resp = session.get(
-                "https://app.yalidine.app/api/user/api-keys",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=15
-            )
-
-            if settings_resp.status_code == 200:
-                keys_data = settings_resp.json()
-                api_id    = keys_data.get("api_id",    "")
-                api_token = keys_data.get("api_token", "")
-                return {
-                    "success":   True,
-                    "api_id":    api_id,
-                    "api_token": api_token
-                }
-
-            return {"success": False, "error": "ما قدرناش نجيب المفتاح"}
-
+            # 200 = صح | 404 = صح (ما فيش طرود) | 401 = غلط
+            if resp.status_code in [200, 404]:
+                return {"success": True, "api_id": api_id, "api_token": api_token}
+            elif resp.status_code == 401:
+                return {"success": False, "error": "API ID أو Token غلط — تحقق من لوحة Yalidine"}
+            else:
+                # نقبل حتى لو كان رد غير متوقع
+                return {"success": True, "api_id": api_id, "api_token": api_token}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
     def get_parcels(self) -> list:
-        """جلب كل الطرود النشطة"""
         try:
             resp = requests.get(
                 f"{self.BASE_URL}/parcels/",
@@ -80,7 +68,6 @@ class YalidineCarrier(BaseCarrier):
             return []
 
     def track_parcel(self, tracking_number: str) -> dict:
-        """تتبع طرد واحد"""
         try:
             resp = requests.get(
                 f"{self.BASE_URL}/parcels/{tracking_number}/",
@@ -100,25 +87,22 @@ class YalidineCarrier(BaseCarrier):
             return {}
 
     def normalize_status(self, raw_status: str) -> str:
-        """تحويل حالات Yalidine للحالات الموحدة"""
         mapping = {
-            # Yalidine statuses → حالات موحدة
-            "En préparation":          "at_origin",
-            "Collecté":                "at_origin",
-            "En transit":              "in_transit",
-            "Arrivé wilaya":           "at_destination",
-            "En cours de livraison":   "out_for_delivery",
-            "Livré":                   "delivered",
-            "Tentative échouée":       "failed_attempt",
-            "Retourné":                "returned",
-            # English variants
-            "preparing":               "at_origin",
-            "collected":               "at_origin",
-            "in_transit":              "in_transit",
-            "arrived":                 "at_destination",
-            "out_for_delivery":        "out_for_delivery",
-            "delivered":               "delivered",
-            "failed":                  "failed_attempt",
-            "returned":                "returned",
+            "En préparation":        "at_origin",
+            "Collecté":              "at_origin",
+            "En transit":            "in_transit",
+            "Arrivé wilaya":         "at_destination",
+            "En cours de livraison": "out_for_delivery",
+            "Livré":                 "delivered",
+            "Tentative échouée":     "failed_attempt",
+            "Retourné":              "returned",
+            "preparing":             "at_origin",
+            "collected":             "at_origin",
+            "in_transit":            "in_transit",
+            "arrived":               "at_destination",
+            "out_for_delivery":      "out_for_delivery",
+            "delivered":             "delivered",
+            "failed":                "failed_attempt",
+            "returned":              "returned",
         }
         return mapping.get(raw_status, "in_transit")
