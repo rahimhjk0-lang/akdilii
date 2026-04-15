@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}إنشاء حساب{% endblock %}
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    <div class="card border-0 shadow-lg" style="width:440px; border-radius:20px; overflow:hidden;">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                <h2 class="fw-800" style="color:#1a1a2e;">🚀 اكدلي</h2>
+                <p class="text-muted">سجل وابدأ تتبع طرودك مجاناً</p>
+            </div>
+            {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            <form method="post" action="/register">
+                <div class="mb-3">
+                    <label class="form-label fw-600">اسم المتجر</label>
+                    <input type="text" name="name" class="form-control" placeholder="متجر محمد" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-600">الإيميل</label>
+                    <input type="email" name="email" class="form-control" placeholder="example@email.com" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-600">رقم الهاتف</label>
+                    <input type="tel" name="phone" class="form-control" placeholder="0555 XX XX XX">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-600">كلمة السر</label>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary-custom w-100 btn-lg">
+                    <i class="fas fa-user-plus ms-2"></i> إنشاء الحساب
+                </button>
+            </form>
+            <div class="text-center mt-3">
+                <span class="text-muted">عندك حساب؟</span>
+                <a href="/login" class="text-success fw-600 me-1">ادخل</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
