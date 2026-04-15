@@ -43,7 +43,8 @@ CARRIERS = {
     "ecotrack":   {"name": "Ecotrack",           "logo": "ecotrack.png"},
     "procolis":   {"name": "Procolis",           "logo": "procolis.png"},
     "maystro":    {"name": "Maystro Delivery",   "logo": "maystro.png"},
-    "guepex":     {"name": "Guepex",             "logo": "guepex.png"},
+    "guepex":        {"name": "Guepex",             "logo": "guepex.png"},
+    "ecom_delivery": {"name": "E-com Delivery",    "logo": "ecom.png"},
 }
 
 # ---- حالات الطرد ----
