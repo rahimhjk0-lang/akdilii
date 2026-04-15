@@ -24,9 +24,30 @@
         <button class="btn btn-outline-danger btn-sm w-100" onclick="disconnectCarrier('{{ code }}')">
             قطع الربط
         </button>
+
         {% else %}
         <form onsubmit="connectCarrier(event, '{{ code }}')">
             <input type="hidden" name="carrier_code" value="{{ code }}">
+
+            {% if code == 'yalidine' %}
+            {# Yalidine يستخدم API_ID + API_TOKEN من لوحة التحكم #}
+            <div class="alert alert-warning py-2 small mb-2">
+                <i class="fas fa-info-circle ms-1"></i>
+                احصل على المفاتيح من: <strong>yalidine.com ← حسابك ← إعدادات API</strong>
+            </div>
+            <div class="mb-2">
+                <label class="form-label small fw-600">API ID</label>
+                <input type="text" name="email" class="form-control form-control-sm"
+                       placeholder="مثال: 12345" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-600">API Token</label>
+                <input type="password" name="password" class="form-control form-control-sm"
+                       placeholder="المفتاح السري" required>
+            </div>
+
+            {% else %}
+            {# باقي الشركات: إيميل + كلمة سر #}
             <div class="mb-2">
                 <input type="email" name="email" class="form-control form-control-sm"
                        placeholder="إيميل {{ info.name }}" required>
@@ -39,6 +60,8 @@
                 <i class="fas fa-lock ms-1"></i>
                 نستعملها مرة واحدة فقط باش نجيب مفتاحك — نحذفوها فوراً 🔒
             </div>
+            {% endif %}
+
             <button type="submit" class="btn btn-primary-custom w-100 btn-sm">
                 <i class="fas fa-link ms-1"></i> ربط الحساب
             </button>
@@ -69,6 +92,19 @@ async function connectCarrier(e, code) {
         alert('❌ ' + json.error);
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-link ms-1"></i> ربط الحساب';
+    }
+}
+
+async function disconnectCarrier(code) {
+    if (!confirm('⚠️ تأكيد قطع الربط مع ' + code + '؟')) return;
+    const fd = new FormData();
+    fd.append('carrier_code', code);
+    const resp = await fetch('/carriers/disconnect', { method: 'POST', body: fd });
+    const json = await resp.json();
+    if (json.success) {
+        location.reload();
+    } else {
+        alert('❌ ' + (json.error || 'خطأ'));
     }
 }
 </script>
