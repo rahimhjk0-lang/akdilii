@@ -35,7 +35,8 @@ class Carrier(Base):
     merchant_id  = Column(Integer, ForeignKey("merchants.id"), nullable=False)
     carrier_code = Column(String(50), nullable=False)   # yalidine, zr_express...
     carrier_name = Column(String(100), nullable=False)
-    api_key      = Column(Text, nullable=True)           # المفتاح بعد ما نجيبه
+    api_key      = Column(Text, nullable=True)           # API Token
+    api_id       = Column(Text, nullable=True)           # API ID (Yalidine)
     is_connected = Column(Boolean, default=False)
     created_at   = Column(DateTime, server_default=func.now())
 
