@@ -117,6 +117,7 @@ async def connect_carrier(
 
     if existing:
         existing.api_key      = api_key
+        existing.api_id       = api_id
         existing.is_connected = True
     else:
         new_carrier = Carrier(
@@ -124,6 +125,7 @@ async def connect_carrier(
             carrier_code = carrier_code,
             carrier_name = CARRIERS.get(carrier_code, {}).get("name", carrier_code),
             api_key      = api_key,
+            api_id       = api_id,
             is_connected = True
         )
         db.add(new_carrier)
@@ -133,6 +135,24 @@ async def connect_carrier(
 
     db.commit()
     return JSONResponse({"success": True, "message": f"✅ تم ربط {carrier_code} بنجاح!"})
+
+
+@router.post("/carriers/disconnect")
+async def disconnect_carrier(
+    carrier_code: str = Form(...),
+    db:           Session  = Depends(get_db),
+    merchant:     Merchant = Depends(get_current_merchant)
+):
+    carrier = db.query(Carrier).filter(
+        Carrier.merchant_id  == merchant.id,
+        Carrier.carrier_code == carrier_code
+    ).first()
+    if carrier:
+        carrier.is_connected = False
+        carrier.api_key      = None
+        carrier.api_id       = None
+        db.commit()
+    return JSONResponse({"success": True})
 
 # ==========================================
 # صفحة الباقات
