@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اكدلي — {% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Cairo', sans-serif; }
+        body { background: #f8f9fa; }
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            width: 260px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            z-index: 100;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+        }
+        .sidebar .brand {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar .brand h4 {
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.4rem;
+            margin: 0;
+        }
+        .sidebar .brand span { color: #4CAF50; }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.7);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin: 3px 10px;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+        .sidebar .nav-link i { margin-left: 10px; width: 20px; }
+
+        /* Main Content */
+        .main-content {
+            margin-right: 260px;
+            padding: 25px;
+        }
+
+        /* Cards */
+        .stat-card {
+            background: #fff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: none;
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card .icon {
+            width: 55px;
+            height: 55px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: white;
+        }
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1a1a2e;
+        }
+
+        /* Status Badges */
+        .badge-at_origin        { background: #6c757d; }
+        .badge-in_transit       { background: #0d6efd; }
+        .badge-at_destination   { background: #0dcaf0; color: #000 !important; }
+        .badge-out_for_delivery { background: #fd7e14; }
+        .badge-delivered        { background: #198754; }
+        .badge-failed_attempt   { background: #dc3545; }
+        .badge-returned         { background: #6f42c1; }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* Table */
+        .table-card {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        /* Topbar */
+        .topbar {
+            background: #fff;
+            padding: 15px 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Alerts */
+        .alert { border-radius: 12px; border: none; }
+
+        /* Buttons */
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #4CAF50, #388E3C);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            padding: 10px 25px;
+        }
+        .btn-primary-custom:hover {
+            background: linear-gradient(135deg, #388E3C, #2E7D32);
+            color: white;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-right: 0; padding: 15px; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if request.cookies.get('akdili_token') %}
+<!-- Sidebar -->
+<nav class="sidebar">
+    <div class="brand text-center">
+        <h4>🚀 <span>اك</span>دلي</h4>
+        <small class="text-muted">منصة التتبع الذكية</small>
+    </div>
+    <ul class="nav flex-column mt-3">
+        <li class="nav-item">
+            <a class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                <i class="fas fa-chart-line"></i> لوحة التحكم
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/parcels' in request.url.path %}active{% endif %}" href="/parcels">
+                <i class="fas fa-box"></i> الطرود
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/carriers' in request.url.path %}active{% endif %}" href="/carriers">
+                <i class="fas fa-truck"></i> شركات التوصيل
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/plans' in request.url.path %}active{% endif %}" href="/plans">
+                <i class="fas fa-crown"></i> الباقات
+            </a>
+        </li>
+        <li class="nav-item mt-auto">
+            <a class="nav-link text-danger" href="/logout">
+                <i class="fas fa-sign-out-alt"></i> خروج
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Main -->
+<div class="{% if request.cookies.get('akdili_token') %}main-content{% else %}container-fluid{% endif %}">
+    {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
