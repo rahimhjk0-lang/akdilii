@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block content %}
+<!-- Topbar -->
+<div class="topbar">
+    <div>
+        <h5 class="mb-0 fw-700">مرحباً {{ merchant.name }} 👋</h5>
+        <small class="text-muted">باقة {{ plan.name }} — {{ merchant.orders_used }}/{{ plan.orders }} طلب</small>
+    </div>
+    <div>
+        <span class="badge bg-success fs-6 px-3 py-2">{{ plan.price_dz }}/شهر</span>
+    </div>
+</div>
+
+<!-- إحصائيات -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1 small">إجمالي الطرود</p>
+                    <div class="number">{{ total_parcels }}</div>
+                </div>
+                <div class="icon" style="background:linear-gradient(135deg,#4CAF50,#388E3C)">
+                    <i class="fas fa-box"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1 small">قيد التوصيل</p>
+                    <div class="number text-primary">{{ active_parcels }}</div>
+                </div>
+                <div class="icon" style="background:linear-gradient(135deg,#2196F3,#1565C0)">
+                    <i class="fas fa-truck"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1 small">تم التسليم</p>
+                    <div class="number text-success">{{ delivered }}</div>
+                </div>
+                <div class="icon" style="background:linear-gradient(135deg,#4CAF50,#1B5E20)">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1 small">إشعارات أُرسلت</p>
+                    <div class="number text-warning">{{ notifs_sent }}</div>
+                </div>
+                <div class="icon" style="background:linear-gradient(135deg,#FF9800,#E65100)">
+                    <i class="fab fa-whatsapp"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- آخر الطرود -->
+<div class="table-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-700 mb-0">آخر الطرود</h6>
+        <a href="/parcels" class="btn btn-sm btn-outline-success">عرض الكل</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>رقم التتبع</th>
+                    <th>الزبون</th>
+                    <th>الهاتف</th>
+                    <th>الشركة</th>
+                    <th>الحالة</th>
+                    <th>الولاية</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in recent_parcels %}
+            <tr onclick="window.location='/parcels/{{ p.id }}'" style="cursor:pointer;">
+                <td><code>{{ p.tracking_number }}</code></td>
+                <td>{{ p.customer_name }}</td>
+                <td>{{ p.customer_phone }}</td>
+                <td>
+                    {% if p.carrier %}
+                    <small class="badge bg-light text-dark">{{ p.carrier.carrier_name }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="status-badge badge-{{ p.current_status }}">
+                        {% if p.current_status == 'at_origin' %}📦 مكتب الإرسال
+                        {% elif p.current_status == 'in_transit' %}🚚 في الطريق
+                        {% elif p.current_status == 'at_destination' %}🏢 وصل المكتب
+                        {% elif p.current_status == 'out_for_delivery' %}🛵 عند الساعي
+                        {% elif p.current_status == 'delivered' %}✅ تم التسليم
+                        {% elif p.current_status == 'failed_attempt' %}⚠️ محاولة فاشلة
+                        {% elif p.current_status == 'returned' %}↩️ مرتجع
+                        {% else %}{{ p.current_status }}{% endif %}
+                    </span>
+                </td>
+                <td>{{ p.wilaya or "—" }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                    ما فيش طرود بعد — <a href="/carriers">اربط شركة التوصيل أولاً</a>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
