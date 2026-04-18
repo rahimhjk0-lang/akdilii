@@ -58,16 +58,23 @@ async def register(
             "error": "الإيميل مسجل مسبقاً"
         })
 
-    merchant = Merchant(
-        name     = name,
-        email    = email,
-        password = hash_password(password),
-        phone    = phone,
-        plan     = "starter"
-    )
-    db.add(merchant)
-    db.commit()
-    db.refresh(merchant)
+    try:
+        merchant = Merchant(
+            name     = name,
+            email    = email,
+            password = hash_password(password),
+            phone    = phone,
+            plan     = "starter"
+        )
+        db.add(merchant)
+        db.commit()
+        db.refresh(merchant)
+    except Exception as e:
+        db.rollback()
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "error": f"خطأ في قاعدة البيانات: {str(e)}"
+        })
 
     token    = create_token(merchant.id)
     response = RedirectResponse(url="/dashboard", status_code=302)
@@ -86,7 +93,14 @@ async def login(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    merchant = db.query(Merchant).filter(Merchant.email == email).first()
+    try:
+        merchant = db.query(Merchant).filter(Merchant.email == email).first()
+    except Exception as e:
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "error": f"خطأ في قاعدة البيانات: {str(e)}"
+        })
+
     if not merchant or not verify_password(password, merchant.password):
         return templates.TemplateResponse("login.html", {
             "request": request,
