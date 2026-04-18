@@ -133,10 +133,10 @@ const CARRIERS_CONFIG = {
             </div>
             <div class="d-flex gap-3 p-3" style="background:#f8f5f0;border-radius:12px;border-right:4px solid #c9a96e;">
                 <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
-                <div>انسخ <strong>Token</strong> وضعه أدناه</div>
+                <div>انسخ <strong>API Token</strong> وضعه أدناه</div>
             </div>`,
-        field1: { label: "إيميل ZR Express", placeholder: "example@email.com", hint: "إيميل حسابك في ZR Express" },
-        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في ZR Express" },
+        field1: { label: "API Token", placeholder: "المفتاح من لوحة ZR Express", hint: "Token من إعدادات حسابك" },
+        field2: null,
     },
     ecotrack: {
         title: "🔑 ربط Ecotrack",
@@ -156,8 +156,8 @@ const CARRIERS_CONFIG = {
                 <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
                 <div>انسخ <strong>API Key</strong> وضعه أدناه</div>
             </div>`,
-        field1: { label: "إيميل Ecotrack", placeholder: "example@email.com", hint: "إيميل حسابك في Ecotrack" },
-        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Ecotrack" },
+        field1: { label: "API Key", placeholder: "المفتاح من لوحة Ecotrack", hint: "API Key من إعدادات حسابك" },
+        field2: null,
     },
     procolis: {
         title: "🔑 ربط Procolis",
@@ -177,8 +177,8 @@ const CARRIERS_CONFIG = {
                 <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
                 <div>انسخ <strong>Token</strong> وضعه أدناه</div>
             </div>`,
-        field1: { label: "إيميل Procolis", placeholder: "example@email.com", hint: "إيميل حسابك في Procolis" },
-        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Procolis" },
+        field1: { label: "API Token", placeholder: "المفتاح من لوحة Procolis", hint: "Token من Profil → API" },
+        field2: null,
     },
     maystro: {
         title: "🔑 ربط Maystro Delivery",
@@ -198,8 +198,8 @@ const CARRIERS_CONFIG = {
                 <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
                 <div>انسخ <strong>Token</strong> وضعه أدناه</div>
             </div>`,
-        field1: { label: "إيميل Maystro", placeholder: "example@email.com", hint: "إيميل حسابك في Maystro" },
-        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Maystro" },
+        field1: { label: "API Token", placeholder: "المفتاح من لوحة Maystro", hint: "Token من إعدادات Maystro" },
+        field2: null,
     },
     guepex: {
         title: "🔑 ربط Guepex",
@@ -219,8 +219,8 @@ const CARRIERS_CONFIG = {
                 <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
                 <div>انسخ <strong>Token</strong> وضعه أدناه</div>
             </div>`,
-        field1: { label: "إيميل Guepex", placeholder: "example@email.com", hint: "إيميل حسابك في Guepex" },
-        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك في Guepex" },
+        field1: { label: "API Token", placeholder: "المفتاح من لوحة Guepex", hint: "Token من إعدادات Guepex" },
+        field2: null,
     },
     ecom_delivery: {
         title: "🔑 ربط E-com Delivery",
@@ -240,8 +240,8 @@ const CARRIERS_CONFIG = {
                 <div class="fw-700 fs-5" style="color:#c9a96e;min-width:30px;">3</div>
                 <div>انسخ <strong>Token</strong> وضعه أدناه</div>
             </div>`,
-        field1: { label: "إيميل E-com Delivery", placeholder: "example@email.com", hint: "إيميل حسابك في E-com Delivery" },
-        field2: { label: "كلمة السر", placeholder: "********", hint: "كلمة سر حسابك" },
+        field1: { label: "API Token", placeholder: "المفتاح من لوحة E-com Delivery", hint: "Token من إعدادات حسابك" },
+        field2: null,
     },
 };
 
@@ -261,10 +261,20 @@ function openModal(code) {
     document.getElementById('field1Input').value           = '';
     document.getElementById('field1Hint').textContent      = cfg.field1.hint;
 
-    document.getElementById('field2Label').textContent     = cfg.field2.label;
-    document.getElementById('field2Input').placeholder     = cfg.field2.placeholder;
-    document.getElementById('field2Input').value           = '';
-    document.getElementById('field2Hint').textContent      = cfg.field2.hint;
+    // field2 — يظهر فقط إذا field2 موجود (مثل Yalidine)
+    const field2Wrap = document.getElementById('field2Wrap');
+    if (cfg.field2) {
+        field2Wrap.style.display = '';
+        document.getElementById('field2Label').textContent     = cfg.field2.label;
+        document.getElementById('field2Input').placeholder     = cfg.field2.placeholder;
+        document.getElementById('field2Input').value           = '';
+        document.getElementById('field2Hint').textContent      = cfg.field2.hint;
+        document.getElementById('field2Input').required        = true;
+    } else {
+        field2Wrap.style.display = 'none';
+        document.getElementById('field2Input').value           = '';
+        document.getElementById('field2Input').required        = false;
+    }
 
     document.getElementById('connectBtn').innerHTML        = `<i class="fas fa-link ms-1"></i> ربط ${cfg.title.replace('🔑 ربط ', '')} الحين`;
 
