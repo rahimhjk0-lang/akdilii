@@ -90,48 +90,78 @@ async def connect_carrier(
     request:      Request,
     carrier_code: str = Form(...),
     email:        str = Form(...),
-    password:     str = Form(...),
+    password:     str = Form(""),   # اختياري — فارغ لشركات Token فقط
     db:           Session  = Depends(get_db),
     merchant:     Merchant = Depends(get_current_merchant)
 ):
-    # جلب كلاس الشركة
+    # ===== شركات Token مباشر (بدون login) =====
+    DIRECT_TOKEN_CARRIERS = {"zr_express", "ecotrack", "procolis", "maystro", "guepex", "ecom_delivery"}
+
+    if carrier_code in DIRECT_TOKEN_CARRIERS:
+        # email = field1 = التوكن المباشر
+        api_token = email.strip()
+        if not api_token:
+            return JSONResponse({"success": False, "error": "⚠️ أدخل API Token"})
+
+        existing = db.query(Carrier).filter(
+            Carrier.merchant_id  == merchant.id,
+            Carrier.carrier_code == carrier_code
+        ).first()
+
+        if existing:
+            existing.api_key      = api_token
+            existing.api_id       = ""
+            existing.is_connected = True
+        else:
+            db.add(Carrier(
+                merchant_id  = merchant.id,
+                carrier_code = carrier_code,
+                carrier_name = CARRIERS.get(carrier_code, {}).get("name", carrier_code),
+                api_key      = api_token,
+                api_id       = "",
+                is_connected = True
+            ))
+
+        db.commit()
+        return JSONResponse({"success": True, "message": f"✅ تم ربط {carrier_code} بنجاح!"})
+
+    # ===== شركات API ID + Token (مثل Yalidine) =====
     carrier_cls = CARRIER_CLASSES.get(carrier_code)
     if not carrier_cls:
         return JSONResponse({"success": False, "error": "شركة غير معروفة"})
 
-    # تسجيل الدخول وجلب المفتاح
-    carrier_obj = carrier_cls(api_key="")
-    result      = carrier_obj.login_and_get_key(email, password)
+    # email = API ID  |  password = API Token
+    api_id    = email.strip()
+    api_token = password.strip()
+
+    if not api_id or not api_token:
+        return JSONResponse({"success": False, "error": "⚠️ أدخل API ID و API Token"})
+
+    # اختبار الاتصال مع Yalidine
+    carrier_obj = carrier_cls(api_key=api_token)
+    result = carrier_obj.login_and_get_key(api_id, api_token)
 
     if not result.get("success"):
-        return JSONResponse({"success": False, "error": result.get("error", "فشل الربط")})
+        return JSONResponse({"success": False, "error": result.get("error", "فشل الربط — تحقق من المفاتيح")})
 
-    api_key = result.get("api_token", "")
-    api_id  = result.get("api_id",    "")
-
-    # حفظ أو تحديث في قاعدة البيانات
     existing = db.query(Carrier).filter(
         Carrier.merchant_id  == merchant.id,
         Carrier.carrier_code == carrier_code
     ).first()
 
     if existing:
-        existing.api_key      = api_key
+        existing.api_key      = api_token
         existing.api_id       = api_id
         existing.is_connected = True
     else:
-        new_carrier = Carrier(
+        db.add(Carrier(
             merchant_id  = merchant.id,
             carrier_code = carrier_code,
             carrier_name = CARRIERS.get(carrier_code, {}).get("name", carrier_code),
-            api_key      = api_key,
+            api_key      = api_token,
             api_id       = api_id,
             is_connected = True
-        )
-        db.add(new_carrier)
-
-    # حذف كلمة السر فوراً — ما نحفظوهاش! 🔒
-    del password
+        ))
 
     db.commit()
     return JSONResponse({"success": True, "message": f"✅ تم ربط {carrier_code} بنجاح!"})
