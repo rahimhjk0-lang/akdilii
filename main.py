@@ -13,6 +13,7 @@ from scheduler import start_scheduler, stop_scheduler
 from routes.auth import router as auth_router
 from routes.dashboard import router as dashboard_router
 from routes.admin import router as admin_router
+from routes.billing import router as billing_router
 
 # ==========================================
 # Keep-Alive — يمنع Render من النوم
@@ -54,6 +55,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(auth_router)
 app.include_router(dashboard_router)
 app.include_router(admin_router)
+app.include_router(billing_router)
 
 templates = Jinja2Templates(directory="templates")
 
