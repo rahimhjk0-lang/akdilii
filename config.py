@@ -19,6 +19,11 @@ _db_url = os.getenv("DATABASE_URL", "sqlite:///./akdili.db")
 # Render يبعث postgres:// لكن SQLAlchemy يحتاج postgresql://
 DATABASE_URL = _db_url.replace("postgres://", "postgresql://", 1) if _db_url.startswith("postgres://") else _db_url
 
+# ---- Chargily Pay ----
+CHARGILY_API_KEY        = os.getenv("CHARGILY_API_KEY", "")
+CHARGILY_WEBHOOK_SECRET = os.getenv("CHARGILY_WEBHOOK_SECRET", "")
+APP_URL                 = os.getenv("APP_URL", "https://akdilii.onrender.com")
+
 # ---- UltraMsg واتساب ----
 ULTRAMSG_INSTANCE = os.getenv("ULTRAMSG_INSTANCE", "")
 ULTRAMSG_TOKEN    = os.getenv("ULTRAMSG_TOKEN", "")
