@@ -11,7 +11,8 @@ load_dotenv()
 # ---- الإعدادات الأساسية ----
 APP_NAME    = "اكدلي - Akdili"
 APP_VERSION = "1.0.0"
-SECRET_KEY  = os.getenv("SECRET_KEY", "akdili-secret-key-change-in-production")
+SECRET_KEY    = os.getenv("SECRET_KEY", "akdili-secret-key-change-in-production")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "akdili2026")
 
 # ---- قاعدة البيانات ----
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./akdili.db")
