@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}لوحة Admin{% endblock %}
+{% block content %}
+<div class="topbar d-flex justify-content-between align-items-center">
+    <div>
+        <h5 class="mb-0 fw-700">🛡️ لوحة Admin — Akdili</h5>
+        <small class="text-muted">إدارة التجار والاشتراكات</small>
+    </div>
+    <a href="/admin/logout" class="btn btn-outline-danger btn-sm">خروج</a>
+</div>
+
+<!-- إحصائيات -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">إجمالي التجار</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-success">{{ active_subs }}</div>
+            <div class="stat-label">اشتراك نشط</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-danger">{{ expired }}</div>
+            <div class="stat-label">منتهي / غير مفعّل</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number">{{ total_parcels }}</div>
+            <div class="stat-label">إجمالي الطرود</div>
+        </div>
+    </div>
+</div>
+
+<!-- تنبيه اشتراكات منتهية قريباً -->
+{% if expiring_soon %}
+<div class="alert alert-warning mb-4">
+    <i class="fas fa-exclamation-triangle ms-2"></i>
+    <strong>{{ expiring_soon|length }} تاجر</strong> ينتهي اشتراكهم خلال 3 أيام:
+    {% for m in expiring_soon %}
+        <span class="badge bg-warning text-dark ms-1">{{ m.name }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- قائمة التجار -->
+<div class="stat-card p-0" style="overflow:hidden;">
+    <div class="p-3" style="background:#1a1a2e;">
+        <h6 class="text-white fw-700 mb-0">👥 التجار</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead style="background:#f8f5f0;">
+                <tr>
+                    <th>#</th>
+                    <th>الاسم</th>
+                    <th>الإيميل</th>
+                    <th>الباقة</th>
+                    <th>الاشتراك</th>
+                    <th>ينتهي</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for m in merchants %}
+            <tr>
+                <td class="text-muted small">{{ m.id }}</td>
+                <td class="fw-700">{{ m.name }}</td>
+                <td class="small text-muted">{{ m.email }}</td>
+                <td>
+                    <span class="badge" style="background:#c9a96e;">{{ m.plan or 'starter' }}</span>
+                </td>
+                <td>
+                    {% if m.sub_active and m.sub_expires and m.sub_expires > now %}
+                        <span class="badge bg-success">✅ نشط</span>
+                    {% else %}
+                        <span class="badge bg-danger">❌ منتهي</span>
+                    {% endif %}
+                </td>
+                <td class="small">
+                    {% if m.sub_expires %}
+                        {{ m.sub_expires.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <!-- تفعيل -->
+                        <button class="btn btn-success btn-sm"
+                                onclick="openActivate({{ m.id }}, '{{ m.name }}', '{{ m.plan or 'starter' }}')">
+                            فعّل
+                        </button>
+                        <!-- إيقاف -->
+                        {% if m.sub_active %}
+                        <button class="btn btn-warning btn-sm"
+                                onclick="deactivate({{ m.id }}, '{{ m.name }}')">
+                            وقّف
+                        </button>
+                        {% endif %}
+                        <!-- حذف -->
+                        <button class="btn btn-outline-danger btn-sm"
+                                onclick="deleteMerchant({{ m.id }}, '{{ m.name }}')">
+                            حذف
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">ما فيش تجار بعد</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal تفعيل اشتراك -->
+<div class="modal fade" id="activateModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px;">
+      <div class="modal-header" style="background:#1a1a2e; border:none;">
+        <h5 class="modal-title text-white fw-700">✅ تفعيل اشتراك</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="fw-700 mb-3">التاجر: <span id="activateName" style="color:#c9a96e;"></span></p>
+        <form onsubmit="doActivate(event)">
+            <input type="hidden" id="activateMerchantId" name="merchant_id">
+            <div class="mb-3">
+                <label class="form-label fw-700 small">الباقة</label>
+                <select name="plan" id="activatePlan" class="form-select" style="border-radius:10px;">
+                    {% for code, info in plans.items() %}
+                    <option value="{{ code }}">{{ info.name }} — {{ info.price_dz }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-700 small">مدة الاشتراك</label>
+                <select name="days" class="form-select" style="border-radius:10px;">
+                    <option value="30">30 يوم</option>
+                    <option value="60">60 يوم</option>
+                    <option value="90">90 يوم</option>
+                    <option value="365">سنة كاملة</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success w-100" style="border-radius:10px;">
+                <i class="fas fa-check ms-1"></i> تفعيل الاشتراك
+            </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+function openActivate(id, name, plan) {
+    document.getElementById('activateMerchantId').value = id;
+    document.getElementById('activateName').textContent  = name;
+    // اختار الباقة الحالية
+    const sel = document.getElementById('activatePlan');
+    for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === plan) { sel.selectedIndex = i; break; }
+    }
+    new bootstrap.Modal(document.getElementById('activateModal')).show();
+}
+
+async function doActivate(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const r  = await fetch('/admin/activate', { method: 'POST', body: fd });
+    const j  = await r.json();
+    if (j.success) {
+        bootstrap.Modal.getInstance(document.getElementById('activateModal')).hide();
+        alert(j.message);
+        location.reload();
+    } else {
+        alert('❌ ' + j.error);
+    }
+}
+
+async function deactivate(id, name) {
+    if (!confirm(`⚠️ إيقاف اشتراك ${name}؟`)) return;
+    const fd = new FormData();
+    fd.append('merchant_id', id);
+    const r = await fetch('/admin/deactivate', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (j.success) location.reload();
+}
+
+async function deleteMerchant(id, name) {
+    if (!confirm(`🗑️ حذف تاجر "${name}" نهائياً؟`)) return;
+    const fd = new FormData();
+    fd.append('merchant_id', id);
+    const r = await fetch('/admin/delete', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (j.success) location.reload();
+}
+</script>
+{% endblock %}
+{% endblock %}
