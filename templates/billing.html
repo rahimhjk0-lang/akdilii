@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}الاشتراك والدفع{% endblock %}
+{% block content %}
+
+<div class="topbar">
+    <h5 class="mb-0 fw-700">💳 الاشتراك والدفع</h5>
+    <small class="text-muted">اختر الباقة المناسبة لتجارتك</small>
+</div>
+
+<!-- ===== الحالة الحالية ===== -->
+<div class="stat-card mb-4" style="border-right: 4px solid #c9a96e;">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h6 class="fw-700 mb-1" style="color:#6b5a45;">📦 باقتك الحالية</h6>
+            {% if merchant.sub_active and merchant.sub_expires %}
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge fs-6 px-3 py-2" style="background:#c9a96e;color:white;">
+                        ✅ {{ merchant.sub_plan|upper if merchant.sub_plan else merchant.plan|upper }}
+                    </span>
+                    <span class="text-muted small">تنتهي في: <strong>{{ merchant.sub_expires.strftime('%Y-%m-%d') }}</strong></span>
+                </div>
+            {% else %}
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge fs-6 px-3 py-2 bg-secondary">🔒 Starter (تجريبي)</span>
+                    <span class="text-muted small">— فعّل باقة للحصول على كامل المزايا</span>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="small text-muted">الطلبات المستخدمة</div>
+            <div class="fw-700 fs-5" style="color:#6b5a45;">
+                {{ merchant.orders_used }} / {{ plans[merchant.sub_plan if merchant.sub_plan else merchant.plan]['orders'] }}
+            </div>
+            <div class="progress mt-1" style="height:6px;border-radius:4px;">
+                {% set used_pct = (merchant.orders_used / plans[merchant.sub_plan if merchant.sub_plan else merchant.plan]['orders'] * 100)|int %}
+                <div class="progress-bar" style="width:{{ [used_pct, 100]|min }}%;background:#c9a96e;border-radius:4px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== الباقات ===== -->
+<h6 class="fw-700 mb-3" style="color:#6b5a45;">🚀 اختر باقتك</h6>
+<div class="row g-3 mb-4">
+
+    {% for plan_key, plan in plans.items() %}
+    <div class="col-md-4 col-lg-{% if loop.length == 5 %}{% if loop.index <= 2 %}6{% else %}4{% endif %}{% else %}4{% endif %}">
+        <div class="stat-card h-100 position-relative {% if plan_key == 'growth' %}border border-2{% endif %}"
+             style="{% if plan_key == 'growth' %}border-color:#c9a96e !important;{% endif %}">
+
+            {% if plan_key == 'growth' %}
+            <div class="position-absolute top-0 start-50 translate-middle">
+                <span class="badge px-3 py-1" style="background:#c9a96e;color:white;font-size:11px;border-radius:20px;">
+                    ⭐ الأكثر طلباً
+                </span>
+            </div>
+            {% endif %}
+
+            <div class="text-center pt-{% if plan_key == 'growth' %}3{% else %}0{% endif %}">
+                <h5 class="fw-700 mb-1" style="color:#6b5a45;">{{ plan.name }}</h5>
+                <div class="my-3">
+                    <span class="fw-700" style="font-size:2rem;color:#1a1a2e;">{{ plan.price_dz }}</span>
+                    <span class="text-muted small">/شهر</span>
+                </div>
+
+                <div class="text-start mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-check-circle" style="color:#c9a96e;"></i>
+                        <span class="small">حتى <strong>{{ plan.orders }}</strong> طرد/شهر</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-check-circle" style="color:#c9a96e;"></i>
+                        <span class="small">تتبع تلقائي لكل شركات التوصيل</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-check-circle" style="color:#c9a96e;"></i>
+                        <span class="small">إشعارات واتساب للزبائن</span>
+                    </div>
+                    {% if plan_key in ['pro', 'business', 'enterprise'] %}
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-check-circle" style="color:#c9a96e;"></i>
+                        <span class="small">إشعارات SMS احتياطية</span>
+                    </div>
+                    {% endif %}
+                    {% if plan_key in ['business', 'enterprise'] %}
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-check-circle" style="color:#c9a96e;"></i>
+                        <span class="small">دعم أولوية 24/7</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if merchant.sub_active and merchant.sub_plan == plan_key %}
+                    <button class="btn w-100 btn-sm" style="background:#e8f5e9;color:#2e7d32;border:none;border-radius:10px;" disabled>
+                        ✅ باقتك الحالية
+                    </button>
+                {% else %}
+                    <button class="btn btn-primary-custom w-100 btn-sm"
+                            onclick="startPayment('{{ plan_key }}', '{{ plan.name }}', {{ plan.price }})">
+                        <i class="fas fa-credit-card ms-1"></i> اشترك الحين
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<!-- ===== طرق الدفع ===== -->
+<div class="stat-card" style="background:linear-gradient(135deg,#f8f5f0,#fff);">
+    <h6 class="fw-700 mb-3" style="color:#6b5a45;">🏦 طرق الدفع المقبولة</h6>
+    <div class="row g-3">
+        <div class="col-auto">
+            <div class="d-flex align-items-center gap-2 p-2 px-3" style="background:#fff;border-radius:10px;border:1px solid #e0d8cf;">
+                <i class="fas fa-university" style="color:#c9a96e;"></i>
+                <span class="fw-700 small">CCP — بريد الجزائر</span>
+            </div>
+        </div>
+        <div class="col-auto">
+            <div class="d-flex align-items-center gap-2 p-2 px-3" style="background:#fff;border-radius:10px;border:1px solid #e0d8cf;">
+                <i class="fas fa-wallet" style="color:#c9a96e;"></i>
+                <span class="fw-700 small">BaridiMob</span>
+            </div>
+        </div>
+        <div class="col-auto">
+            <div class="d-flex align-items-center gap-2 p-2 px-3" style="background:#fff;border-radius:10px;border:1px solid #e0d8cf;">
+                <i class="fas fa-credit-card" style="color:#c9a96e;"></i>
+                <span class="fw-700 small">Dahabia — بريدي موب</span>
+            </div>
+        </div>
+        <div class="col-auto">
+            <div class="d-flex align-items-center gap-2 p-2 px-3" style="background:#fff;border-radius:10px;border:1px solid #e0d8cf;">
+                <i class="fas fa-credit-card" style="color:#c9a96e;"></i>
+                <span class="fw-700 small">CIB — SATIM</span>
+            </div>
+        </div>
+    </div>
+    <p class="text-muted small mt-3 mb-0">
+        <i class="fas fa-lock ms-1"></i>
+        الدفع آمن عبر <strong>Chargily Pay</strong> — منصة الدفع الجزائرية الرائدة
+    </p>
+</div>
+
+<!-- ===== Modal تأكيد الدفع ===== -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px;overflow:hidden;">
+      <div class="modal-header" style="background:#1a1a2e;border:none;">
+        <h5 class="modal-title text-white fw-700">💳 تأكيد الاشتراك</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="mb-3">
+            <i class="fas fa-box-open fa-3x" style="color:#c9a96e;"></i>
+        </div>
+        <h5 class="fw-700 mb-1" id="payPlanName">Growth</h5>
+        <div class="fw-700 mb-3" style="font-size:1.8rem;color:#6b5a45;" id="payPlanPrice"></div>
+        <p class="text-muted small mb-4">
+            بعد الضغط ستنتقل لصفحة الدفع الآمن عبر <strong>Chargily Pay</strong><br>
+            بعد إتمام الدفع يُفعَّل حسابك <strong>تلقائياً</strong> ✅
+        </p>
+        <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+            <button class="btn btn-primary-custom px-4" id="confirmPayBtn" onclick="confirmPayment()">
+                <i class="fas fa-arrow-left ms-1"></i> ادفع الحين
+            </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedPlan = '';
+
+function startPayment(planKey, planName, planPrice) {
+    selectedPlan = planKey;
+    document.getElementById('payPlanName').textContent  = planName;
+    document.getElementById('payPlanPrice').textContent = planPrice.toLocaleString('ar-DZ') + ' دج / شهر';
+    new bootstrap.Modal(document.getElementById('payModal')).show();
+}
+
+async function confirmPayment() {
+    const btn = document.getElementById('confirmPayBtn');
+    btn.disabled    = true;
+    btn.innerHTML   = '<span class="spinner-border spinner-border-sm ms-1"></span> جاري التجهيز...';
+
+    try {
+        const res  = await fetch('/billing/create-checkout', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ plan: selectedPlan })
+        });
+        const data = await res.json();
+
+        if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+        } else {
+            alert('❌ ' + (data.error || 'خطأ في إنشاء الدفع'));
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fas fa-arrow-left ms-1"></i> ادفع الحين';
+        }
+    } catch(e) {
+        alert('❌ خطأ في الاتصال');
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="fas fa-arrow-left ms-1"></i> ادفع الحين';
+    }
+}
+</script>
+{% endblock %}
