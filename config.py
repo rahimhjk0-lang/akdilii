@@ -41,7 +41,7 @@ PLANS = {
     "growth":     {"name": "Growth",     "orders": 200,  "price": 4900,  "price_dz": "4,900 دج"},
     "pro":        {"name": "Pro",        "orders": 300,  "price": 6900,  "price_dz": "6,900 دج"},
     "business":   {"name": "Business",   "orders": 500,  "price": 9900,  "price_dz": "9,900 دج"},
-    "enterprise": {"name": "Enterprise", "orders": 99999,"price": 14900, "price_dz": "14,900 دج"},
+    "enterprise": {"name": "Enterprise", "orders": 2000, "price": 14900, "price_dz": "14,900 دج"},
 }
 
 # ---- شركات التوصيل ----
