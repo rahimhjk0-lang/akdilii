@@ -15,7 +15,7 @@ SECRET_KEY    = os.getenv("SECRET_KEY", "akdili-secret-key-change-in-production"
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "akdili2026")
 
 # ---- قاعدة البيانات ----
-_db_url = os.getenv("DATABASE_URL", "sqlite:///./akdili.db")
+_db_url = os.getenv("DATABASE_URL", "sqlite:///./akdili.db").strip()
 # Render يبعث postgres:// لكن SQLAlchemy يحتاج postgresql://
 DATABASE_URL = _db_url.replace("postgres://", "postgresql://", 1) if _db_url.startswith("postgres://") else _db_url
 
