@@ -1,37 +1,30 @@
 import requests
-from config import ULTRAMSG_INSTANCE, ULTRAMSG_TOKEN, STATUS_MESSAGES, WHATSAPP_STATUSES, SMS_STATUSES
+from config import GREEN_API_INSTANCE, GREEN_API_TOKEN, STATUS_MESSAGES, WHATSAPP_STATUSES, SMS_STATUSES
 
 # ==========================================
-# إرسال واتساب عبر UltraMsg
+# إرسال واتساب عبر Green API
 # ==========================================
 def send_whatsapp(phone: str, message: str) -> bool:
-    """يبعث رسالة واتساب — يرجع True إذا نجح"""
     try:
-        if not ULTRAMSG_INSTANCE or not ULTRAMSG_TOKEN:
-            print("⚠️ UltraMsg غير مضبوط")
+        if not GREEN_API_INSTANCE or not GREEN_API_TOKEN:
+            print("⚠️ Green API غير مضبوط")
             return False
 
-        # تنظيف الرقم
         phone = clean_phone(phone)
+        chat_id = phone.replace("+", "") + "@c.us"
 
         resp = requests.post(
-            f"https://api.ultramsg.com/{ULTRAMSG_INSTANCE}/messages/chat",
-            data={
-                "token": ULTRAMSG_TOKEN,
-                "to":    phone,
-                "body":  message
-            },
-            timeout=10
+            f"https://{GREEN_API_INSTANCE}.api.greenapi.com/waInstance{GREEN_API_INSTANCE}/sendMessage/{GREEN_API_TOKEN}",
+            json={"chatId": chat_id, "message": message},
+            timeout=15
         )
-
-        result = resp.json()
-        if result.get("sent") == "true" or result.get("id"):
+        data = resp.json()
+        if data.get("idMessage"):
             print(f"✅ واتساب وصل → {phone}")
             return True
         else:
-            print(f"❌ واتساب فشل → {phone} | {result}")
+            print(f"❌ واتساب فشل → {phone} | {data}")
             return False
-
     except Exception as e:
         print(f"❌ خطأ واتساب: {e}")
         return False
