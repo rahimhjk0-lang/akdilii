@@ -1,202 +1,219 @@
 {% extends "admin_base.html" %}
 {% block content %}
 
-<div class="admin-topbar">
-    <div>
-        <h5>📊 الإحصائيات العامة</h5>
-        <small>آخر تحديث — الحين</small>
+<style>
+.at { color:#c9a96e; font-weight:800; font-size:1.3rem; margin-bottom:6px; }
+.sub { color:rgba(255,255,255,0.4); font-size:13px; }
+.stats { display:flex; gap:16px; margin-bottom:28px; flex-wrap:wrap; }
+.sbox { background:#1a1a2e; border:1px solid rgba(201,169,110,0.15); border-radius:14px; padding:18px 24px; min-width:130px; }
+.sbox .n { font-size:2rem; font-weight:800; color:#fff; }
+.sbox .l { font-size:12px; color:rgba(255,255,255,0.4); }
+
+table { width:100%; border-collapse:collapse; font-size:14px; }
+thead th { color:rgba(255,255,255,0.35); font-size:11px; font-weight:700; padding:8px 12px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.06); }
+tbody tr { border-bottom:1px solid rgba(255,255,255,0.04); }
+tbody tr:hover { background:rgba(201,169,110,0.04); }
+tbody td { padding:12px 12px; vertical-align:middle; color:rgba(255,255,255,0.8); }
+
+.badge-on  { background:rgba(34,197,94,0.15);  color:#4ade80; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+.badge-off { background:rgba(239,68,68,0.15);  color:#f87171; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+.badge-pl  { background:rgba(201,169,110,0.15);color:#c9a96e; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+
+.btn-act  { background:#c9a96e; color:#1a1a2e; border:none; border-radius:8px; padding:6px 12px; font-weight:700; cursor:pointer; font-family:'Cairo',sans-serif; font-size:12px; }
+.btn-edit { background:rgba(99,102,241,0.2); color:#818cf8; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; }
+.btn-del  { background:rgba(239,68,68,0.15);  color:#f87171; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; }
+.btn-stop { background:rgba(255,165,0,0.15);  color:#fb923c; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; }
+
+/* Overlay بسيط */
+#overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.8); z-index:9999;
+    align-items:center; justify-content:center;
+}
+#overlay.show { display:flex; }
+.obox {
+    background:#1e1e32; border:1px solid rgba(201,169,110,0.25);
+    border-radius:16px; padding:28px; width:90%; max-width:400px;
+    color:#e2e8f0; direction:rtl;
+}
+.obox h6 { color:#c9a96e; font-weight:800; margin:0 0 20px; }
+.obox label { font-size:12px; color:rgba(255,255,255,0.5); display:block; margin-bottom:5px; }
+.obox input, .obox select {
+    width:100%; padding:9px 12px; border-radius:8px;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
+    color:#fff; font-family:'Cairo',sans-serif; font-size:13px; margin-bottom:12px; box-sizing:border-box;
+}
+.obox select option { background:#1e1e32; }
+.orow { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+.obtn-cancel { background:rgba(255,255,255,0.08); color:#fff; border:none; border-radius:8px; padding:9px 18px; font-family:'Cairo',sans-serif; font-weight:600; cursor:pointer; }
+.obtn-ok { background:#c9a96e; color:#1a1a2e; border:none; border-radius:8px; padding:9px 22px; font-family:'Cairo',sans-serif; font-weight:800; cursor:pointer; }
+</style>
+
+<div class="at">👥 التجار</div>
+<div class="sub">إجمالي الحسابات على المنصة</div>
+
+<div class="stats" style="margin-top:16px;">
+    <div class="sbox">
+        <div class="n">{{ total }}</div>
+        <div class="l">إجمالي التجار</div>
+    </div>
+    <div class="sbox">
+        <div class="n" style="color:#4ade80;">{{ active }}</div>
+        <div class="l">اشتراك نشط</div>
+    </div>
+    <div class="sbox">
+        <div class="n" style="color:#f87171;">{{ total - active }}</div>
+        <div class="l">غير مفعّل</div>
     </div>
 </div>
 
-<!-- Stats -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-icon" style="background:rgba(201,169,110,0.15);">
-                <i class="fas fa-users" style="color:#c9a96e;"></i>
+{% if merchants %}
+<div style="overflow-x:auto;">
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>الإيميل</th>
+            <th>الهاتف</th>
+            <th>الباقة</th>
+            <th>الحالة</th>
+            <th>الانتهاء</th>
+            <th>الطرود</th>
+            <th>تسجيل</th>
+            <th>إجراءات</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for m in merchants %}
+    <tr>
+        <td style="color:rgba(255,255,255,0.3);">{{ m.id }}</td>
+        <td style="font-weight:700;color:#fff;">{{ m.name }}</td>
+        <td style="color:rgba(255,255,255,0.5);font-size:12px;">{{ m.email }}</td>
+        <td style="color:rgba(255,255,255,0.5);font-size:12px;">{{ m.phone }}</td>
+        <td><span class="badge-pl">{{ m.plan }}</span></td>
+        <td>
+            {% if m.sub_active %}
+                <span class="badge-on">✅ نشط</span>
+            {% else %}
+                <span class="badge-off">❌ غير نشط</span>
+            {% endif %}
+        </td>
+        <td style="font-size:12px;color:rgba(255,255,255,0.4);">{{ m.sub_expires }}</td>
+        <td style="color:rgba(255,255,255,0.5);">{{ m.parcel_count }}</td>
+        <td style="font-size:11px;color:rgba(255,255,255,0.3);">{{ m.created_at }}</td>
+        <td>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                <button class="btn-act" onclick="openActivate({{ m.id }}, '{{ m.name }}')">⚡ تفعيل</button>
+                <button class="btn-edit" onclick="openEdit({{ m.id }}, '{{ m.name }}', '{{ m.email }}', '{{ m.phone }}')">✏️</button>
+                {% if m.sub_active %}
+                <button class="btn-stop" onclick="doStop({{ m.id }}, '{{ m.name }}')">⏸</button>
+                {% endif %}
+                <button class="btn-del" onclick="doDelete({{ m.id }}, '{{ m.name }}')">🗑</button>
             </div>
-            <div class="stat-val">{{ total }}</div>
-            <div class="stat-lbl">إجمالي التجار</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-icon" style="background:rgba(34,197,94,0.15);">
-                <i class="fas fa-check-circle" style="color:#4ade80;"></i>
-            </div>
-            <div class="stat-val" style="color:#4ade80;">{{ active_subs }}</div>
-            <div class="stat-lbl">اشتراك نشط</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-icon" style="background:rgba(239,68,68,0.15);">
-                <i class="fas fa-times-circle" style="color:#f87171;"></i>
-            </div>
-            <div class="stat-val" style="color:#f87171;">{{ expired }}</div>
-            <div class="stat-lbl">غير مفعّل</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-icon" style="background:rgba(99,102,241,0.15);">
-                <i class="fas fa-box" style="color:#818cf8;"></i>
-            </div>
-            <div class="stat-val" style="color:#818cf8;">{{ total_parcels }}</div>
-            <div class="stat-lbl">إجمالي الطرود</div>
-        </div>
-    </div>
-</div>
-
-<!-- تنبيه -->
-{% if expiring_soon %}
-<div class="admin-alert mb-4">
-    <i class="fas fa-exclamation-triangle ms-2"></i>
-    <strong>{{ expiring_soon|length }} تاجر</strong> ينتهي اشتراكهم خلال 3 أيام:
-    {% for m in expiring_soon %}
-        <strong>{{ m.name }}</strong>{% if not loop.last %}، {% endif %}
+        </td>
+    </tr>
     {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% else %}
+<div style="text-align:center;padding:60px 0;color:rgba(255,255,255,0.2);">
+    <div style="font-size:3rem;margin-bottom:12px;">👥</div>
+    <p>ما فيه تجار بعد</p>
 </div>
 {% endif %}
 
-<!-- جدول التجار -->
-<div class="admin-card">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h6 class="mb-0 fw-700" style="color:#c9a96e;">👥 التجار</h6>
-        <span class="badge-plan">{{ total }} تاجر</span>
-    </div>
-
-    {% if merchants %}
-    <div class="table-responsive">
-    <table class="admin-table">
-        <thead>
-            <tr>
-                <th>التاجر</th>
-                <th>الإيميل</th>
-                <th>الباقة</th>
-                <th>الحالة</th>
-                <th>الانتهاء</th>
-                <th>الطرود</th>
-                <th>إجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for m in merchants %}
-        <tr>
-            <td>
-                <div class="fw-700" style="color:#fff;">{{ m.name }}</div>
-                <div style="color:rgba(255,255,255,0.3);font-size:11px;">ID: {{ m.id }}</div>
-            </td>
-            <td style="color:rgba(255,255,255,0.6);">{{ m.email }}</td>
-            <td>
-                <span class="badge-plan">{{ (m.sub_plan or m.plan or 'starter')|upper }}</span>
-            </td>
-            <td>
-                {% if m.sub_active %}
-                    <span class="badge-active">✅ نشط</span>
-                {% else %}
-                    <span class="badge-inactive">❌ غير نشط</span>
-                {% endif %}
-            </td>
-            <td style="color:rgba(255,255,255,0.5);font-size:13px;">
-                {% if m.sub_expires %}
-                    {{ m.sub_expires.strftime('%d/%m/%Y') }}
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-            <td style="color:rgba(255,255,255,0.6);">{{ m.parcels|length }}</td>
-            <td>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-gold btn-sm" onclick="openActivate({{ m.id }}, '{{ m.name }}')">
-                        <i class="fas fa-bolt"></i> تفعيل
-                    </button>
-                    {% if m.sub_active %}
-                    <button class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:none;border-radius:8px;"
-                            onclick="deactivate({{ m.id }}, '{{ m.name }}')">
-                        <i class="fas fa-ban"></i>
-                    </button>
-                    {% endif %}
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    </div>
-    {% else %}
-    <div class="text-center py-5" style="color:rgba(255,255,255,0.3);">
-        <i class="fas fa-users fa-3x mb-3"></i>
-        <p>ما فيه تجار بعد</p>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Modal تفعيل -->
-<div class="modal fade" id="activateModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h6 class="modal-title fw-700" style="color:#c9a96e;">⚡ تفعيل اشتراك</h6>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body p-4">
-        <p class="mb-3" style="color:rgba(255,255,255,0.7);">التاجر: <strong id="merchantName" style="color:#fff;"></strong></p>
-        <div class="mb-3">
-            <label class="form-label">الباقة</label>
-            <select class="form-select" id="planSelect">
-                {% for pk, pv in plans.items() %}
-                <option value="{{ pk }}">{{ pv.name }} — {{ pv.price_dz }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">المدة (أيام)</label>
-            <input type="number" class="form-control" id="daysInput" value="30" min="1" max="365">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-        <button class="btn btn-gold px-4" onclick="confirmActivate()">
-            <i class="fas fa-bolt ms-1"></i> تفعيل
-        </button>
-      </div>
-    </div>
-  </div>
+<!-- Overlay تفعيل -->
+<div id="overlay">
+    <div class="obox" id="oboxContent"></div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let currentMerchantId = null;
+const plans = { {% for pk, pv in plans.items() %}"{{ pk }}": "{{ pv.name }} — {{ pv.price_dz }}"{% if not loop.last %}, {% endif %}{% endfor %} };
+
+function closeO() { document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click', e => { if(e.target.id==='overlay') closeO(); });
+
+function planOptions(sel='starter') {
+    return Object.entries(plans).map(([k,v]) =>
+        `<option value="${k}" ${k===sel?'selected':''} style="background:#1e1e32">${v}</option>`
+    ).join('');
+}
 
 function openActivate(id, name) {
-    currentMerchantId = id;
-    document.getElementById('merchantName').textContent = name;
-    new bootstrap.Modal(document.getElementById('activateModal')).show();
+    document.getElementById('oboxContent').innerHTML = `
+        <h6>⚡ تفعيل اشتراك</h6>
+        <p style="color:rgba(255,255,255,0.5);margin-bottom:16px;font-size:13px;">التاجر: <strong style="color:#fff">${name}</strong></p>
+        <label>الباقة</label>
+        <select id="oPlan">${planOptions()}</select>
+        <label>المدة (أيام)</label>
+        <input type="number" id="oDays" value="30" min="1" max="365">
+        <div class="orow">
+            <button class="obtn-cancel" onclick="closeO()">إلغاء</button>
+            <button class="obtn-ok" onclick="doActivate(${id})">⚡ تفعيل</button>
+        </div>`;
+    document.getElementById('overlay').classList.add('show');
 }
 
-async function confirmActivate() {
-    const plan = document.getElementById('planSelect').value;
-    const days = document.getElementById('daysInput').value;
-    const fd = new FormData();
-    fd.append('merchant_id', currentMerchantId);
-    fd.append('plan', plan);
-    fd.append('days', days);
-    const r = await fetch('/admin/activate', { method: 'POST', body: fd });
-    const d = await r.json();
-    if (d.success) { alert(d.message); location.reload(); }
-    else alert('❌ ' + d.error);
+function openEdit(id, name, email, phone) {
+    document.getElementById('oboxContent').innerHTML = `
+        <h6>✏️ تعديل بيانات التاجر</h6>
+        <label>الاسم</label>
+        <input type="text" id="eName" value="${name}">
+        <label>الإيميل</label>
+        <input type="email" id="eEmail" value="${email}">
+        <label>الهاتف</label>
+        <input type="text" id="ePhone" value="${phone === '—' ? '' : phone}">
+        <div class="orow">
+            <button class="obtn-cancel" onclick="closeO()">إلغاء</button>
+            <button class="obtn-ok" onclick="doEdit(${id})">💾 حفظ</button>
+        </div>`;
+    document.getElementById('overlay').classList.add('show');
 }
 
-async function deactivate(id, name) {
-    if (!confirm(`إيقاف اشتراك ${name}؟`)) return;
+async function doActivate(id) {
     const fd = new FormData();
     fd.append('merchant_id', id);
-    const r = await fetch('/admin/deactivate', { method: 'POST', body: fd });
+    fd.append('plan', document.getElementById('oPlan').value);
+    fd.append('days', document.getElementById('oDays').value);
+    const r = await fetch('/admin/activate', {method:'POST', body:fd});
     const d = await r.json();
-    if (d.success) location.reload();
+    closeO();
+    alert(d.ok ? d.msg : '❌ ' + d.msg);
+    if(d.ok) location.reload();
+}
+
+async function doEdit(id) {
+    const fd = new FormData();
+    fd.append('merchant_id', id);
+    fd.append('name',  document.getElementById('eName').value);
+    fd.append('email', document.getElementById('eEmail').value);
+    fd.append('phone', document.getElementById('ePhone').value);
+    const r = await fetch('/admin/edit', {method:'POST', body:fd});
+    const d = await r.json();
+    closeO();
+    if(d.ok) location.reload();
+}
+
+async function doStop(id, name) {
+    if(!confirm(`إيقاف اشتراك ${name}؟`)) return;
+    const fd = new FormData(); fd.append('merchant_id', id);
+    const r = await fetch('/admin/deactivate', {method:'POST', body:fd});
+    const d = await r.json();
+    if(d.ok) location.reload();
+}
+
+async function doDelete(id, name) {
+    if(!confirm(`⚠️ حذف حساب ${name} نهائياً؟`)) return;
+    const fd = new FormData(); fd.append('merchant_id', id);
+    const r = await fetch('/admin/delete', {method:'POST', body:fd});
+    const d = await r.json();
+    if(d.ok) location.reload();
 }
 </script>
 {% endblock %}
