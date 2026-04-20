@@ -1,0 +1,250 @@
+{% extends "admin_base.html" %}
+{% block content %}
+
+<div class="admin-topbar">
+    <div>
+        <h5>📊 الإحصائيات العامة</h5>
+        <small>آخر تحديث — الحين</small>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-box">
+            <div class="stat-icon" style="background:rgba(201,169,110,0.15);">
+                <i class="fas fa-users" style="color:#c9a96e;"></i>
+            </div>
+            <div class="stat-val">{{ total }}</div>
+            <div class="stat-lbl">إجمالي التجار</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-box">
+            <div class="stat-icon" style="background:rgba(34,197,94,0.15);">
+                <i class="fas fa-check-circle" style="color:#4ade80;"></i>
+            </div>
+            <div class="stat-val" style="color:#4ade80;">{{ active_subs }}</div>
+            <div class="stat-lbl">اشتراك نشط</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-box">
+            <div class="stat-icon" style="background:rgba(239,68,68,0.15);">
+                <i class="fas fa-times-circle" style="color:#f87171;"></i>
+            </div>
+            <div class="stat-val" style="color:#f87171;">{{ expired }}</div>
+            <div class="stat-lbl">غير مفعّل</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-box">
+            <div class="stat-icon" style="background:rgba(99,102,241,0.15);">
+                <i class="fas fa-box" style="color:#818cf8;"></i>
+            </div>
+            <div class="stat-val" style="color:#818cf8;">{{ total_parcels }}</div>
+            <div class="stat-lbl">إجمالي الطرود</div>
+        </div>
+    </div>
+</div>
+
+<!-- تنبيه -->
+{% if expiring_soon %}
+<div class="admin-alert mb-4">
+    <i class="fas fa-exclamation-triangle ms-2"></i>
+    <strong>{{ expiring_soon|length }} تاجر</strong> ينتهي اشتراكهم خلال 3 أيام:
+    {% for m in expiring_soon %}
+        <strong>{{ m.name }}</strong>{% if not loop.last %}، {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- جدول التجار -->
+<div class="admin-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h6 class="mb-0" style="color:#c9a96e;font-weight:800;">👥 التجار</h6>
+        <span class="badge-plan">{{ total }} تاجر</span>
+    </div>
+
+    {% if merchants %}
+    <div class="table-responsive">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>التاجر</th>
+                <th>الإيميل</th>
+                <th>الباقة</th>
+                <th>الحالة</th>
+                <th>الانتهاء</th>
+                <th>الطرود</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for m in merchants %}
+        <tr>
+            <td>
+                <div style="color:#fff;font-weight:700;">{{ m.name }}</div>
+                <div style="color:rgba(255,255,255,0.3);font-size:11px;">ID: {{ m.id }}</div>
+            </td>
+            <td style="color:rgba(255,255,255,0.6);">{{ m.email }}</td>
+            <td>
+                <span class="badge-plan">{{ (m.sub_plan or m.plan or 'starter')|upper }}</span>
+            </td>
+            <td>
+                {% if m.sub_active %}
+                    <span class="badge-active">✅ نشط</span>
+                {% else %}
+                    <span class="badge-inactive">❌ غير نشط</span>
+                {% endif %}
+            </td>
+            <td style="color:rgba(255,255,255,0.5);font-size:13px;">
+                {% if m.sub_expires %}
+                    {{ m.sub_expires.strftime('%d/%m/%Y') }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td style="color:rgba(255,255,255,0.6);">{{ m.parcels|length }}</td>
+            <td>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <button class="btn btn-gold btn-sm" onclick="openActivate({{ m.id }}, '{{ m.name }}')">
+                        <i class="fas fa-bolt"></i> تفعيل
+                    </button>
+                    {% if m.sub_active %}
+                    <button class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:none;border-radius:8px;padding:5px 10px;"
+                            onclick="deactivate({{ m.id }}, '{{ m.name }}')">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5" style="color:rgba(255,255,255,0.3);">
+        <i class="fas fa-users fa-3x mb-3"></i>
+        <p>ما فيه تجار بعد</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ===== نافذة تفعيل — بدون Bootstrap Modal ===== -->
+<div id="myOverlay" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.75);
+    z-index:9999;
+    align-items:center;
+    justify-content:center;
+">
+    <div style="
+        background:#1e1e32;
+        border:1px solid rgba(201,169,110,0.3);
+        border-radius:18px;
+        padding:28px;
+        width:90%;
+        max-width:420px;
+        color:#e2e8f0;
+        direction:rtl;
+    ">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h6 style="color:#c9a96e;font-weight:800;margin:0;">⚡ تفعيل اشتراك</h6>
+            <button onclick="closeOverlay()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+
+        <p style="color:rgba(255,255,255,0.6);margin-bottom:16px;">
+            التاجر: <strong id="merchantName" style="color:#fff;"></strong>
+        </p>
+
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px;color:rgba(255,255,255,0.6);font-weight:600;display:block;margin-bottom:6px;">الباقة</label>
+            <select id="planSelect" style="
+                width:100%;padding:10px 14px;border-radius:10px;
+                background:rgba(255,255,255,0.07);
+                border:1px solid rgba(255,255,255,0.15);
+                color:#fff;font-family:'Cairo',sans-serif;font-size:14px;
+            ">
+                {% for pk, pv in plans.items() %}
+                <option value="{{ pk }}" style="background:#1e1e32;color:#fff;">{{ pv.name }} — {{ pv.price_dz }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <label style="font-size:13px;color:rgba(255,255,255,0.6);font-weight:600;display:block;margin-bottom:6px;">المدة (أيام)</label>
+            <input type="number" id="daysInput" value="30" min="1" max="365" style="
+                width:100%;padding:10px 14px;border-radius:10px;
+                background:rgba(255,255,255,0.07);
+                border:1px solid rgba(255,255,255,0.15);
+                color:#fff;font-family:'Cairo',sans-serif;font-size:14px;
+            ">
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="closeOverlay()" style="
+                background:rgba(255,255,255,0.08);color:#fff;border:none;
+                border-radius:10px;padding:10px 20px;font-family:'Cairo',sans-serif;
+                font-weight:600;cursor:pointer;
+            ">إلغاء</button>
+            <button onclick="confirmActivate()" style="
+                background:#c9a96e;color:#1a1a2e;border:none;
+                border-radius:10px;padding:10px 24px;font-family:'Cairo',sans-serif;
+                font-weight:800;cursor:pointer;
+            ">
+                <i class="fas fa-bolt"></i> تفعيل
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentMerchantId = null;
+
+function openActivate(id, name) {
+    currentMerchantId = id;
+    document.getElementById('merchantName').textContent = name;
+    const overlay = document.getElementById('myOverlay');
+    overlay.style.display = 'flex';
+}
+
+function closeOverlay() {
+    document.getElementById('myOverlay').style.display = 'none';
+}
+
+// إغلاق بالضغط خارج النافذة
+document.getElementById('myOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeOverlay();
+});
+
+async function confirmActivate() {
+    const plan = document.getElementById('planSelect').value;
+    const days = document.getElementById('daysInput').value;
+    const fd = new FormData();
+    fd.append('merchant_id', currentMerchantId);
+    fd.append('plan', plan);
+    fd.append('days', days);
+    const r = await fetch('/admin/activate', { method: 'POST', body: fd });
+    const d = await r.json();
+    closeOverlay();
+    if (d.success) { alert(d.message); location.reload(); }
+    else alert('❌ ' + (d.error || 'خطأ'));
+}
+
+async function deactivate(id, name) {
+    if (!confirm(`إيقاف اشتراك ${name}؟`)) return;
+    const fd = new FormData();
+    fd.append('merchant_id', id);
+    const r = await fetch('/admin/deactivate', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.success) location.reload();
+}
+</script>
+{% endblock %}
