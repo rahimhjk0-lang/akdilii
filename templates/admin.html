@@ -1,219 +1,152 @@
-{% extends "admin_base.html" %}
-{% block content %}
-
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Akdili Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-.at { color:#c9a96e; font-weight:800; font-size:1.3rem; margin-bottom:6px; }
-.sub { color:rgba(255,255,255,0.4); font-size:13px; }
-.stats { display:flex; gap:16px; margin-bottom:28px; flex-wrap:wrap; }
-.sbox { background:#1a1a2e; border:1px solid rgba(201,169,110,0.15); border-radius:14px; padding:18px 24px; min-width:130px; }
-.sbox .n { font-size:2rem; font-weight:800; color:#fff; }
-.sbox .l { font-size:12px; color:rgba(255,255,255,0.4); }
-
-table { width:100%; border-collapse:collapse; font-size:14px; }
-thead th { color:rgba(255,255,255,0.35); font-size:11px; font-weight:700; padding:8px 12px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.06); }
-tbody tr { border-bottom:1px solid rgba(255,255,255,0.04); }
-tbody tr:hover { background:rgba(201,169,110,0.04); }
-tbody td { padding:12px 12px; vertical-align:middle; color:rgba(255,255,255,0.8); }
-
-.badge-on  { background:rgba(34,197,94,0.15);  color:#4ade80; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
-.badge-off { background:rgba(239,68,68,0.15);  color:#f87171; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
-.badge-pl  { background:rgba(201,169,110,0.15);color:#c9a96e; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
-
-.btn-act  { background:#c9a96e; color:#1a1a2e; border:none; border-radius:8px; padding:6px 12px; font-weight:700; cursor:pointer; font-family:'Cairo',sans-serif; font-size:12px; }
-.btn-edit { background:rgba(99,102,241,0.2); color:#818cf8; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; }
-.btn-del  { background:rgba(239,68,68,0.15);  color:#f87171; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; }
-.btn-stop { background:rgba(255,165,0,0.15);  color:#fb923c; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; }
-
-/* Overlay بسيط */
-#overlay {
-    display:none; position:fixed; inset:0;
-    background:rgba(0,0,0,0.8); z-index:9999;
-    align-items:center; justify-content:center;
-}
-#overlay.show { display:flex; }
-.obox {
-    background:#1e1e32; border:1px solid rgba(201,169,110,0.25);
-    border-radius:16px; padding:28px; width:90%; max-width:400px;
-    color:#e2e8f0; direction:rtl;
-}
-.obox h6 { color:#c9a96e; font-weight:800; margin:0 0 20px; }
-.obox label { font-size:12px; color:rgba(255,255,255,0.5); display:block; margin-bottom:5px; }
-.obox input, .obox select {
-    width:100%; padding:9px 12px; border-radius:8px;
-    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
-    color:#fff; font-family:'Cairo',sans-serif; font-size:13px; margin-bottom:12px; box-sizing:border-box;
-}
-.obox select option { background:#1e1e32; }
-.orow { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
-.obtn-cancel { background:rgba(255,255,255,0.08); color:#fff; border:none; border-radius:8px; padding:9px 18px; font-family:'Cairo',sans-serif; font-weight:600; cursor:pointer; }
-.obtn-ok { background:#c9a96e; color:#1a1a2e; border:none; border-radius:8px; padding:9px 22px; font-family:'Cairo',sans-serif; font-weight:800; cursor:pointer; }
+*{font-family:'Cairo',sans-serif;box-sizing:border-box;margin:0;padding:0}
+body{background:#0f0f1a;color:#e2e8f0;min-height:100vh;padding:24px 16px}
+h1{color:#c9a96e;font-size:1.4rem;font-weight:800;margin-bottom:6px}
+.sub{color:rgba(255,255,255,0.35);font-size:13px;margin-bottom:24px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+.sbox{background:#1a1a2e;border:1px solid rgba(201,169,110,0.15);border-radius:12px;padding:16px 20px;min-width:120px}
+.sbox .n{font-size:1.8rem;font-weight:800;color:#fff}
+.sbox .l{font-size:12px;color:rgba(255,255,255,0.4)}
+table{width:100%;border-collapse:collapse}
+thead th{color:rgba(255,255,255,0.3);font-size:11px;font-weight:700;padding:8px 12px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06)}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.04)}
+tbody tr:hover{background:rgba(201,169,110,0.04)}
+tbody td{padding:12px;font-size:14px;color:rgba(255,255,255,0.8)}
+.on{background:rgba(34,197,94,0.15);color:#4ade80;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.off{background:rgba(239,68,68,0.15);color:#f87171;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.pl{background:rgba(201,169,110,0.15);color:#c9a96e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.btn{border:none;border-radius:8px;padding:6px 12px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer}
+.btn-g{background:#c9a96e;color:#1a1a2e}
+.btn-b{background:rgba(99,102,241,0.2);color:#818cf8}
+.btn-r{background:rgba(239,68,68,0.15);color:#f87171}
+.btn-o{background:rgba(255,165,0,0.15);color:#fb923c}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.logout{background:rgba(239,68,68,0.15);color:#f87171;border:none;border-radius:8px;padding:8px 16px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;font-size:13px;text-decoration:none}
+.ovl{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:999;align-items:center;justify-content:center}
+.ovl.show{display:flex}
+.obox{background:#1e1e32;border:1px solid rgba(201,169,110,0.2);border-radius:16px;padding:26px;width:90%;max-width:400px;direction:rtl}
+.obox h6{color:#c9a96e;font-weight:800;margin-bottom:18px;font-size:1rem}
+.obox label{font-size:12px;color:rgba(255,255,255,0.5);display:block;margin-bottom:5px}
+.obox input,.obox select{width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:12px}
+.obox select option{background:#1e1e32}
+.orow{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+.oc{background:rgba(255,255,255,0.08);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-family:'Cairo',sans-serif;font-weight:600;cursor:pointer}
+.ok{background:#c9a96e;color:#1a1a2e;border:none;border-radius:8px;padding:9px 22px;font-family:'Cairo',sans-serif;font-weight:800;cursor:pointer}
+@media(max-width:600px){.hide-mob{display:none}td,th{padding:8px 6px}}
 </style>
+</head>
+<body>
 
-<div class="at">👥 التجار</div>
-<div class="sub">إجمالي الحسابات على المنصة</div>
+<div class="top-bar">
+  <div>
+    <h1>🛡️ لوحة الأدمن</h1>
+    <div class="sub">إجمالي الحسابات على المنصة</div>
+  </div>
+  <a href="/admin/logout" class="logout">🚪 خروج</a>
+</div>
 
-<div class="stats" style="margin-top:16px;">
-    <div class="sbox">
-        <div class="n">{{ total }}</div>
-        <div class="l">إجمالي التجار</div>
-    </div>
-    <div class="sbox">
-        <div class="n" style="color:#4ade80;">{{ active }}</div>
-        <div class="l">اشتراك نشط</div>
-    </div>
-    <div class="sbox">
-        <div class="n" style="color:#f87171;">{{ total - active }}</div>
-        <div class="l">غير مفعّل</div>
-    </div>
+<div class="stats">
+  <div class="sbox"><div class="n">{{ total }}</div><div class="l">إجمالي</div></div>
+  <div class="sbox"><div class="n" style="color:#4ade80">{{ active }}</div><div class="l">مفعّل</div></div>
+  <div class="sbox"><div class="n" style="color:#f87171">{{ total - active }}</div><div class="l">غير مفعّل</div></div>
 </div>
 
 {% if merchants %}
-<div style="overflow-x:auto;">
+<div style="overflow-x:auto">
 <table>
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>الاسم</th>
-            <th>الإيميل</th>
-            <th>الهاتف</th>
-            <th>الباقة</th>
-            <th>الحالة</th>
-            <th>الانتهاء</th>
-            <th>الطرود</th>
-            <th>تسجيل</th>
-            <th>إجراءات</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for m in merchants %}
-    <tr>
-        <td style="color:rgba(255,255,255,0.3);">{{ m.id }}</td>
-        <td style="font-weight:700;color:#fff;">{{ m.name }}</td>
-        <td style="color:rgba(255,255,255,0.5);font-size:12px;">{{ m.email }}</td>
-        <td style="color:rgba(255,255,255,0.5);font-size:12px;">{{ m.phone }}</td>
-        <td><span class="badge-pl">{{ m.plan }}</span></td>
-        <td>
-            {% if m.sub_active %}
-                <span class="badge-on">✅ نشط</span>
-            {% else %}
-                <span class="badge-off">❌ غير نشط</span>
-            {% endif %}
-        </td>
-        <td style="font-size:12px;color:rgba(255,255,255,0.4);">{{ m.sub_expires }}</td>
-        <td style="color:rgba(255,255,255,0.5);">{{ m.parcel_count }}</td>
-        <td style="font-size:11px;color:rgba(255,255,255,0.3);">{{ m.created_at }}</td>
-        <td>
-            <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                <button class="btn-act" onclick="openActivate({{ m.id }}, '{{ m.name }}')">⚡ تفعيل</button>
-                <button class="btn-edit" onclick="openEdit({{ m.id }}, '{{ m.name }}', '{{ m.email }}', '{{ m.phone }}')">✏️</button>
-                {% if m.sub_active %}
-                <button class="btn-stop" onclick="doStop({{ m.id }}, '{{ m.name }}')">⏸</button>
-                {% endif %}
-                <button class="btn-del" onclick="doDelete({{ m.id }}, '{{ m.name }}')">🗑</button>
-            </div>
-        </td>
-    </tr>
-    {% endfor %}
-    </tbody>
+<thead><tr>
+  <th>#</th><th>الاسم</th><th class="hide-mob">الإيميل</th><th>الباقة</th><th>الحالة</th><th>إجراءات</th>
+</tr></thead>
+<tbody>
+{% for m in merchants %}
+<tr>
+  <td style="color:rgba(255,255,255,0.3)">{{ m.id }}</td>
+  <td style="font-weight:700;color:#fff">{{ m.name }}</td>
+  <td class="hide-mob" style="font-size:12px;color:rgba(255,255,255,0.5)">{{ m.email }}</td>
+  <td><span class="pl">{{ m.plan }}</span></td>
+  <td>{% if m.active %}<span class="on">✅ نشط</span>{% else %}<span class="off">❌ غير نشط</span>{% endif %}</td>
+  <td>
+    <div style="display:flex;gap:5px;flex-wrap:wrap">
+      <button class="btn btn-g" onclick="oActivate({{ m.id }},'{{ m.name }}')">⚡ تفعيل</button>
+      <button class="btn btn-b" onclick="oEdit({{ m.id }},'{{ m.name }}','{{ m.email }}')">✏️</button>
+      {% if m.active %}<button class="btn btn-o" onclick="doStop({{ m.id }})">⏸</button>{% endif %}
+      <button class="btn btn-r" onclick="doDel({{ m.id }},'{{ m.name }}')">🗑</button>
+    </div>
+  </td>
+</tr>
+{% endfor %}
+</tbody>
 </table>
 </div>
-
 {% else %}
-<div style="text-align:center;padding:60px 0;color:rgba(255,255,255,0.2);">
-    <div style="font-size:3rem;margin-bottom:12px;">👥</div>
-    <p>ما فيه تجار بعد</p>
+<div style="text-align:center;padding:60px 0;color:rgba(255,255,255,0.2)">
+  <div style="font-size:3rem;margin-bottom:12px">👥</div>
+  <p>ما فيه حسابات بعد</p>
 </div>
 {% endif %}
 
-<!-- Overlay تفعيل -->
-<div id="overlay">
-    <div class="obox" id="oboxContent"></div>
+<!-- Overlay -->
+<div id="ovl" class="ovl" onclick="if(event.target===this)closeO()">
+  <div class="obox" id="obox"></div>
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
 <script>
-const plans = { {% for pk, pv in plans.items() %}"{{ pk }}": "{{ pv.name }} — {{ pv.price_dz }}"{% if not loop.last %}, {% endif %}{% endfor %} };
+const plans={{% for pk,pv in plans.items() %}"{{ pk }}":"{{ pv.name }}"{% if not loop.last %},{% endif %}{% endfor %}};
+function closeO(){document.getElementById("ovl").classList.remove("show")}
+function openO(html){document.getElementById("obox").innerHTML=html;document.getElementById("ovl").classList.add("show")}
 
-function closeO() { document.getElementById('overlay').classList.remove('show'); }
-document.getElementById('overlay').addEventListener('click', e => { if(e.target.id==='overlay') closeO(); });
-
-function planOptions(sel='starter') {
-    return Object.entries(plans).map(([k,v]) =>
-        `<option value="${k}" ${k===sel?'selected':''} style="background:#1e1e32">${v}</option>`
-    ).join('');
+function planOpts(sel="starter"){
+  return Object.entries(plans).map(([k,v])=>`<option value="${k}" ${k===sel?"selected":""} style="background:#1e1e32">${v}</option>`).join("")
 }
 
-function openActivate(id, name) {
-    document.getElementById('oboxContent').innerHTML = `
-        <h6>⚡ تفعيل اشتراك</h6>
-        <p style="color:rgba(255,255,255,0.5);margin-bottom:16px;font-size:13px;">التاجر: <strong style="color:#fff">${name}</strong></p>
-        <label>الباقة</label>
-        <select id="oPlan">${planOptions()}</select>
-        <label>المدة (أيام)</label>
-        <input type="number" id="oDays" value="30" min="1" max="365">
-        <div class="orow">
-            <button class="obtn-cancel" onclick="closeO()">إلغاء</button>
-            <button class="obtn-ok" onclick="doActivate(${id})">⚡ تفعيل</button>
-        </div>`;
-    document.getElementById('overlay').classList.add('show');
+function oActivate(id,name){
+  openO(`<h6>⚡ تفعيل اشتراك</h6>
+    <p style="color:rgba(255,255,255,0.5);margin-bottom:14px;font-size:13px">التاجر: <strong style="color:#fff">${name}</strong></p>
+    <label>الباقة</label><select id="pl">${planOpts()}</select>
+    <label>المدة (أيام)</label><input type="number" id="dy" value="30" min="1" max="365">
+    <div class="orow"><button class="oc" onclick="closeO()">إلغاء</button><button class="ok" onclick="doActivate(${id})">⚡ تفعيل</button></div>`)
 }
 
-function openEdit(id, name, email, phone) {
-    document.getElementById('oboxContent').innerHTML = `
-        <h6>✏️ تعديل بيانات التاجر</h6>
-        <label>الاسم</label>
-        <input type="text" id="eName" value="${name}">
-        <label>الإيميل</label>
-        <input type="email" id="eEmail" value="${email}">
-        <label>الهاتف</label>
-        <input type="text" id="ePhone" value="${phone === '—' ? '' : phone}">
-        <div class="orow">
-            <button class="obtn-cancel" onclick="closeO()">إلغاء</button>
-            <button class="obtn-ok" onclick="doEdit(${id})">💾 حفظ</button>
-        </div>`;
-    document.getElementById('overlay').classList.add('show');
+function oEdit(id,name,email){
+  openO(`<h6>✏️ تعديل الحساب</h6>
+    <label>الاسم</label><input type="text" id="en" value="${name}">
+    <label>الإيميل</label><input type="email" id="ee" value="${email}">
+    <div class="orow"><button class="oc" onclick="closeO()">إلغاء</button><button class="ok" onclick="doEdit(${id})">💾 حفظ</button></div>`)
 }
 
-async function doActivate(id) {
-    const fd = new FormData();
-    fd.append('merchant_id', id);
-    fd.append('plan', document.getElementById('oPlan').value);
-    fd.append('days', document.getElementById('oDays').value);
-    const r = await fetch('/admin/activate', {method:'POST', body:fd});
-    const d = await r.json();
-    closeO();
-    alert(d.ok ? d.msg : '❌ ' + d.msg);
-    if(d.ok) location.reload();
+async function doActivate(id){
+  const fd=new FormData();fd.append("merchant_id",id);fd.append("plan",document.getElementById("pl").value);fd.append("days",document.getElementById("dy").value);
+  const d=await(await fetch("/admin/activate",{method:"POST",body:fd})).json();
+  closeO();if(d.ok){alert(d.msg);location.reload()}else alert("❌ "+d.msg)
 }
 
-async function doEdit(id) {
-    const fd = new FormData();
-    fd.append('merchant_id', id);
-    fd.append('name',  document.getElementById('eName').value);
-    fd.append('email', document.getElementById('eEmail').value);
-    fd.append('phone', document.getElementById('ePhone').value);
-    const r = await fetch('/admin/edit', {method:'POST', body:fd});
-    const d = await r.json();
-    closeO();
-    if(d.ok) location.reload();
+async function doEdit(id){
+  const fd=new FormData();fd.append("merchant_id",id);fd.append("name",document.getElementById("en").value);fd.append("email",document.getElementById("ee").value);
+  const d=await(await fetch("/admin/edit",{method:"POST",body:fd})).json();
+  closeO();if(d.ok)location.reload()
 }
 
-async function doStop(id, name) {
-    if(!confirm(`إيقاف اشتراك ${name}؟`)) return;
-    const fd = new FormData(); fd.append('merchant_id', id);
-    const r = await fetch('/admin/deactivate', {method:'POST', body:fd});
-    const d = await r.json();
-    if(d.ok) location.reload();
+async function doStop(id){
+  if(!confirm("إيقاف الاشتراك؟"))return;
+  const fd=new FormData();fd.append("merchant_id",id);
+  const d=await(await fetch("/admin/deactivate",{method:"POST",body:fd})).json();
+  if(d.ok)location.reload()
 }
 
-async function doDelete(id, name) {
-    if(!confirm(`⚠️ حذف حساب ${name} نهائياً؟`)) return;
-    const fd = new FormData(); fd.append('merchant_id', id);
-    const r = await fetch('/admin/delete', {method:'POST', body:fd});
-    const d = await r.json();
-    if(d.ok) location.reload();
+async function doDel(id,name){
+  if(!confirm(`حذف حساب ${name} نهائياً؟`))return;
+  const fd=new FormData();fd.append("merchant_id",id);
+  const d=await(await fetch("/admin/delete",{method:"POST",body:fd})).json();
+  if(d.ok)location.reload()
 }
 </script>
-{% endblock %}
+</body>
+</html>
