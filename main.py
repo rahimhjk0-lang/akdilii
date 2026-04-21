@@ -73,6 +73,17 @@ async def health():
 # ==========================================
 # تشغيل مباشر
 # ==========================================
+
+@app.get("/check-env")
+async def check_env():
+    import os
+    key = os.getenv("CHARGILY_API_KEY", "")
+    return {
+        "has_key": bool(key),
+        "key_preview": key[:10] + "..." if key else "EMPTY",
+        "app_url": os.getenv("APP_URL", "not set")
+    }
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
