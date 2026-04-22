@@ -307,6 +307,16 @@ async def delete_parcel(
 # ==========================================
 # مزامنة الطرود من شركة التوصيل
 # ==========================================
+def map_yalidine_status(status: str) -> str:
+    mapping = {
+        "1": "at_origin", "2": "in_transit", "3": "at_destination",
+        "4": "out_for_delivery", "5": "delivered", "6": "failed_attempt",
+        "7": "returned", "Ready": "at_origin", "En route": "in_transit",
+        "Arrived": "at_destination", "Out for delivery": "out_for_delivery",
+        "Delivered": "delivered", "Failed": "failed_attempt", "Returned": "returned",
+    }
+    return mapping.get(str(status), "at_origin")
+
 @router.post("/carriers/sync")
 async def sync_parcels(
     request:  Request,
@@ -333,7 +343,20 @@ async def sync_parcels(
             )
             parcels_data = carrier.get_parcels()
 
+            # فلتر آخر 30 يوم فقط
+            from datetime import datetime, timedelta
+            cutoff = datetime.utcnow() - timedelta(days=30)
+
             for p in parcels_data:
+                # تحقق من التاريخ
+                date_str = p.get("date", "") or p.get("created_at", "") or p.get("last_update", "")
+                if date_str:
+                    try:
+                        p_date = datetime.fromisoformat(date_str[:10])
+                        if p_date < cutoff:
+                            continue
+                    except:
+                        pass
                 tracking = p.get("tracking", "") or p.get("id", "") or p.get("tracking_number", "")
                 if not tracking:
                     continue
@@ -341,16 +364,26 @@ async def sync_parcels(
                 if db.query(Parcel).filter(Parcel.tracking_number == str(tracking)).first():
                     continue
                 # أضف الطرد
+                # حقول Yalidine الصحيحة
+                name  = (p.get("firstname", "") + " " + p.get("familyname", "")).strip() or p.get("customer_name", "") or "—"
+                phone = p.get("phone", "") or p.get("customer_phone", "") or "—"
+                wilaya_val = str(p.get("to_wilaya_id", "") or p.get("wilaya_id", "") or p.get("wilaya", "") or "")
+                is_stopdesk = p.get("is_stopdesk", False)
+                dtype = "office" if is_stopdesk else "home"
+                raw_status = p.get("status", "1") or p.get("current_status", "1")
+                status_val = map_yalidine_status(str(raw_status))
+                is_done = status_val in ["delivered", "returned"]
+
                 new_parcel = Parcel(
                     merchant_id     = merchant.id,
                     carrier_id      = carrier_db.id,
                     tracking_number = str(tracking),
-                    customer_name   = p.get("customer_name", "") or p.get("recipient_name", "") or "—",
-                    customer_phone  = p.get("customer_phone", "") or p.get("phone", "") or "—",
-                    wilaya          = p.get("wilaya", "") or p.get("destination", "") or "",
-                    delivery_type   = p.get("delivery_type", "home"),
-                    current_status  = "at_origin",
-                    is_active       = True,
+                    customer_name   = name,
+                    customer_phone  = phone,
+                    wilaya          = wilaya_val,
+                    delivery_type   = dtype,
+                    current_status  = status_val,
+                    is_active       = not is_done,
                 )
                 db.add(new_parcel)
                 total_added += 1
