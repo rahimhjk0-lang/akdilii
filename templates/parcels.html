@@ -3,8 +3,63 @@
 {% block content %}
 <div class="topbar">
     <h5 class="mb-0 fw-700">📦 كل الطرود</h5>
-    <span class="text-muted">{{ parcels|length }} طرد</span>
+    <button onclick="document.getElementById('addOvl').style.display='flex'" style="background:#4CAF50;color:#fff;border:none;border-radius:10px;padding:8px 18px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">
+        ➕ إضافة طرد
+    </button>
 </div>
+
+<!-- نافذة إضافة طرد -->
+<div id="addOvl" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target.id==='addOvl')this.style.display='none'">
+  <div style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:26px;width:90%;max-width:440px;color:#e2e8f0;direction:rtl;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <h6 style="color:#4CAF50;font-weight:800;margin:0;">➕ إضافة طرد جديد</h6>
+      <button onclick="document.getElementById('addOvl').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <form id="addForm">
+      <label style="font-size:12px;color:rgba(255,255,255,0.5);display:block;margin-bottom:4px;">رقم التتبع *</label>
+      <input type="text" name="tracking_number" required style="width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:10px;">
+
+      <label style="font-size:12px;color:rgba(255,255,255,0.5);display:block;margin-bottom:4px;">اسم الزبون *</label>
+      <input type="text" name="customer_name" required style="width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:10px;">
+
+      <label style="font-size:12px;color:rgba(255,255,255,0.5);display:block;margin-bottom:4px;">هاتف الزبون *</label>
+      <input type="text" name="customer_phone" required style="width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:10px;">
+
+      <label style="font-size:12px;color:rgba(255,255,255,0.5);display:block;margin-bottom:4px;">شركة التوصيل *</label>
+      <select name="carrier_id" required style="width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:10px;">
+        <option value="" style="background:#1a1a2e">اختر شركة توصيل</option>
+        {% for c in carriers %}
+        <option value="{{ c.id }}" style="background:#1a1a2e">{{ c.carrier_name }}</option>
+        {% endfor %}
+      </select>
+
+      <label style="font-size:12px;color:rgba(255,255,255,0.5);display:block;margin-bottom:4px;">الولاية</label>
+      <input type="text" name="wilaya" placeholder="اختياري" style="width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:10px;">
+
+      <label style="font-size:12px;color:rgba(255,255,255,0.5);display:block;margin-bottom:4px;">نوع التوصيل</label>
+      <select name="delivery_type" style="width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:16px;">
+        <option value="home" style="background:#1a1a2e">منزل</option>
+        <option value="office" style="background:#1a1a2e">مكتب</option>
+      </select>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" onclick="document.getElementById('addOvl').style.display='none'" style="background:rgba(255,255,255,0.08);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-family:'Cairo',sans-serif;font-weight:600;cursor:pointer;">إلغاء</button>
+        <button type="button" onclick="submitParcel()" style="background:#4CAF50;color:#fff;border:none;border-radius:8px;padding:9px 22px;font-family:'Cairo',sans-serif;font-weight:800;cursor:pointer;">➕ إضافة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+async function submitParcel() {
+  var form = document.getElementById('addForm');
+  var fd = new FormData(form);
+  var r = await fetch('/parcels/add', {method:'POST', body:fd});
+  var d = await r.json();
+  if(d.ok) { alert(d.msg); location.reload(); }
+  else alert('❌ ' + d.msg);
+}
+</script>
 
 <div class="table-card">
     <div class="table-responsive">
@@ -16,7 +71,7 @@
                     <th>الهاتف</th>
                     <th>نوع التوصيل</th>
                     <th>الشركة</th>
-                    <th>الحالة</th>
+                    <th>الحالة</th><th>حذف</th>
                     <th>الولاية</th>
                     <th>التاريخ</th>
                 </tr>
