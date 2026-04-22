@@ -302,3 +302,63 @@ async def delete_parcel(
         db.delete(parcel)
         db.commit()
     return JSONResponse({"ok": True})
+
+
+# ==========================================
+# مزامنة الطرود من شركة التوصيل
+# ==========================================
+@router.post("/carriers/sync")
+async def sync_parcels(
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    # جلب كل الشركات المربوطة
+    carriers_db = db.query(Carrier).filter(
+        Carrier.merchant_id == merchant.id,
+        Carrier.is_connected == True
+    ).all()
+
+    if not carriers_db:
+        return JSONResponse({"ok": False, "msg": "ما فيه شركة توصيل مربوطة"})
+
+    total_added = 0
+
+    for carrier_db in carriers_db:
+        try:
+            carrier = get_carrier(
+                carrier_code = carrier_db.carrier_code,
+                api_key      = carrier_db.api_key or "",
+                api_id       = getattr(carrier_db, "api_id", "") or ""
+            )
+            parcels_data = carrier.get_parcels()
+
+            for p in parcels_data:
+                tracking = p.get("tracking", "") or p.get("id", "") or p.get("tracking_number", "")
+                if not tracking:
+                    continue
+                # إذا موجود من قبل — تخطى
+                if db.query(Parcel).filter(Parcel.tracking_number == str(tracking)).first():
+                    continue
+                # أضف الطرد
+                new_parcel = Parcel(
+                    merchant_id     = merchant.id,
+                    carrier_id      = carrier_db.id,
+                    tracking_number = str(tracking),
+                    customer_name   = p.get("customer_name", "") or p.get("recipient_name", "") or "—",
+                    customer_phone  = p.get("customer_phone", "") or p.get("phone", "") or "—",
+                    wilaya          = p.get("wilaya", "") or p.get("destination", "") or "",
+                    delivery_type   = p.get("delivery_type", "home"),
+                    current_status  = "at_origin",
+                    is_active       = True,
+                )
+                db.add(new_parcel)
+                total_added += 1
+
+            db.commit()
+
+        except Exception as e:
+            db.rollback()
+            return JSONResponse({"ok": False, "msg": f"خطأ: {str(e)}"})
+
+    return JSONResponse({"ok": True, "msg": f"✅ تمت المزامنة — {total_added} طرد جديد"})
