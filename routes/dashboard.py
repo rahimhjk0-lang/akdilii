@@ -60,10 +60,17 @@ async def parcels_page(
         Parcel.merchant_id == merchant.id
     ).order_by(Parcel.created_at.desc()).all()
 
+    # شركات التوصيل المربوطة
+    carriers = db.query(Carrier).filter(
+        Carrier.merchant_id == merchant.id,
+        Carrier.is_connected == True
+    ).all()
+
     return templates.TemplateResponse("parcels.html", {
         "request":  request,
         "merchant": merchant,
         "parcels":  parcels,
+        "carriers": carriers,
     })
 
 # ==========================================
