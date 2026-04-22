@@ -231,3 +231,67 @@ async def parcel_detail(
         "events":   events,
         "notifs":   notifs,
     })
+
+
+# ==========================================
+# إضافة طرد جديد
+# ==========================================
+@router.post("/parcels/add")
+async def add_parcel(
+    request:        Request,
+    tracking_number: str = Form(...),
+    customer_name:   str = Form(...),
+    customer_phone:  str = Form(...),
+    carrier_id:      int = Form(...),
+    delivery_type:   str = Form("home"),
+    wilaya:          str = Form(""),
+    db:              Session  = Depends(get_db),
+    merchant:        Merchant = Depends(get_current_merchant)
+):
+    # تحقق إذا الطرد موجود من قبل
+    existing = db.query(Parcel).filter(Parcel.tracking_number == tracking_number).first()
+    if existing:
+        return JSONResponse({"ok": False, "msg": "رقم التتبع موجود من قبل"})
+
+    # تحقق من الـ carrier
+    carrier = db.query(Carrier).filter(
+        Carrier.id == carrier_id,
+        Carrier.merchant_id == merchant.id
+    ).first()
+    if not carrier:
+        return JSONResponse({"ok": False, "msg": "شركة التوصيل غير موجودة"})
+
+    parcel = Parcel(
+        merchant_id      = merchant.id,
+        carrier_id       = carrier_id,
+        tracking_number  = tracking_number,
+        customer_name    = customer_name,
+        customer_phone   = customer_phone,
+        wilaya           = wilaya,
+        delivery_type    = delivery_type,
+        current_status   = "at_origin",
+        is_active        = True,
+    )
+    db.add(parcel)
+    db.commit()
+    db.refresh(parcel)
+    return JSONResponse({"ok": True, "msg": "✅ تم إضافة الطرد", "id": parcel.id})
+
+# ==========================================
+# حذف طرد
+# ==========================================
+@router.post("/parcels/delete")
+async def delete_parcel(
+    request:   Request,
+    parcel_id: int     = Form(...),
+    db:        Session = Depends(get_db),
+    merchant:  Merchant = Depends(get_current_merchant)
+):
+    parcel = db.query(Parcel).filter(
+        Parcel.id == parcel_id,
+        Parcel.merchant_id == merchant.id
+    ).first()
+    if parcel:
+        db.delete(parcel)
+        db.commit()
+    return JSONResponse({"ok": True})
