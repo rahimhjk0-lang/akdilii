@@ -4,6 +4,25 @@
 <div class="topbar">
     <h5 class="mb-0 fw-700">🚚 شركات التوصيل</h5>
     <small class="text-muted">اربط حسابك في شركة التوصيل</small>
+
+<button onclick="syncParcels()" style="background:#4CAF50;color:#fff;border:none;border-radius:10px;padding:8px 18px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;margin-right:8px;">
+    🔄 مزامنة الطرود
+</button>
+
+<script>
+async function syncParcels() {
+    var btn = event.target;
+    btn.textContent = '⏳ جاري المزامنة...';
+    btn.disabled = true;
+    var r = await fetch('/carriers/sync', {method:'POST'});
+    var d = await r.json();
+    alert(d.msg);
+    btn.textContent = '🔄 مزامنة الطرود';
+    btn.disabled = false;
+    if(d.ok) location.href='/parcels';
+}
+</script>
+
 </div>
 
 <div class="row g-4">
