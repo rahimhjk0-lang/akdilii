@@ -12,7 +12,7 @@ class Merchant(Base):
     email         = Column(String(150), unique=True, nullable=False)
     password      = Column(String(255), nullable=False)
     phone         = Column(String(20),  nullable=True)
-    plan          = Column(String(50),  default="starter")
+    plan          = Column(String(50),  default="free")
     is_active     = Column(Boolean, default=True)
     orders_used   = Column(Integer, default=0)
     created_at    = Column(DateTime, server_default=func.now())

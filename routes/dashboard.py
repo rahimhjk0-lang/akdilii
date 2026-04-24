@@ -332,6 +332,15 @@ async def sync_parcels(
     if not carriers_db:
         return JSONResponse({"ok": False, "msg": "ما فيه شركة توصيل مربوطة"})
 
+    # فحص حد الباقة
+    from config import PLANS
+    plan_info = PLANS.get(merchant.plan, PLANS["free"])
+    current_count = db.query(Parcel).filter(Parcel.merchant_id == merchant.id).count()
+    if current_count >= plan_info["orders"]:
+        if merchant.plan == "free":
+            return JSONResponse({"ok": False, "msg": f"⚠️ وصلت لحد الباقة المجانية (30 طرد) — اشترك في باقة مدفوعة للاستمرار"})
+        return JSONResponse({"ok": False, "msg": f"⚠️ وصلت لحد باقتك ({plan_info['orders']} طرد)"})
+
     total_added = 0
 
     for carrier_db in carriers_db:

@@ -37,6 +37,7 @@ TRACKING_INTERVAL_HOURS = 5  # كل 5 ساعات
 
 # ---- الباقات ----
 PLANS = {
+    "free":       {"name": "مجاني",      "orders": 30,   "price": 0,     "price_dz": "مجاني"},
     "starter":    {"name": "Starter",    "orders": 100,  "price": 2900,  "price_dz": "2,900 دج"},
     "growth":     {"name": "Growth",     "orders": 200,  "price": 4900,  "price_dz": "4,900 دج"},
     "pro":        {"name": "Pro",        "orders": 300,  "price": 6900,  "price_dz": "6,900 دج"},
