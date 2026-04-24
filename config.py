@@ -43,6 +43,7 @@ PLANS = {
     "pro":        {"name": "Pro",        "orders": 300,  "price": 6900,  "price_dz": "6,900 دج"},
     "business":   {"name": "Business",   "orders": 500,  "price": 9900,  "price_dz": "9,900 دج"},
     "enterprise": {"name": "Enterprise", "orders": 2000, "price": 14900, "price_dz": "14,900 دج"},
+    "unlimited":  {"name": "غير محدود",  "orders": 99999, "price": 24900, "price_dz": "24,900 دج"},
 }
 
 # ---- شركات التوصيل ----

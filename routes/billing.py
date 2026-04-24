@@ -20,6 +20,23 @@ templates = Jinja2Templates(directory="templates")
 CHARGILY_API = "https://pay.chargily.net/api/v2"
 
 # ============================================================
+# تفعيل الباقة المجانية بدون دفع
+# ============================================================
+@router.post("/activate-free")
+async def activate_free(
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    if merchant.plan != "free" and merchant.plan is not None:
+        return JSONResponse({"error": "أنت مشترك في باقة مدفوعة"}, status_code=400)
+    merchant.plan     = "free"
+    merchant.sub_plan = "free"
+    merchant.is_active = True
+    db.commit()
+    return JSONResponse({"ok": True, "msg": "✅ تم تفعيل الباقة المجانية"})
+
+# ============================================================
 # صفحة الاشتراك
 # ============================================================
 @router.get("", response_class=HTMLResponse)

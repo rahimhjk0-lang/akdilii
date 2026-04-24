@@ -197,12 +197,15 @@ async def disconnect_carrier(
 @router.get("/plans", response_class=HTMLResponse)
 async def plans_page(
     request:  Request,
+    db:       Session  = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant)
 ):
+    total_parcels = db.query(Parcel).filter(Parcel.merchant_id == merchant.id).count()
     return templates.TemplateResponse("plans.html", {
-        "request":  request,
-        "merchant": merchant,
-        "plans":    PLANS,
+        "request":      request,
+        "merchant":     merchant,
+        "plans":        PLANS,
+        "total_parcels": total_parcels,
     })
 
 # ==========================================
