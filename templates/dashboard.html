@@ -6,17 +6,11 @@
     <div>
         <h5 class="mb-0 fw-700">مرحباً {{ merchant.name }} 👋</h5>
         <small class="text-muted">
-        {% if merchant.plan == 'free' %}
-        🎁 لديك 30 طلب هدية — <a href="/plans" class="text-warning fw-700">ترقية</a>
-        {% else %}
-        باقة {{ plan.name }} — {{ plan.orders }} طلب/شهر
-        {% endif %}
+        {% if merchant.plan != 'free' %}باقة {{ plan.name }} — {{ plan.orders }} طلب/شهر{% endif %}
         </small>
     </div>
     <div>
-        {% if merchant.plan != 'free' %}
-        <span class="badge bg-success fs-6 px-3 py-2">{{ plan.price_dz }}/شهر</span>
-        {% endif %}
+        {% if merchant.plan != 'free' %}<span class="badge bg-success fs-6 px-3 py-2">{{ plan.price_dz }}/شهر</span>{% endif %}
     </div>
 </div>
 
