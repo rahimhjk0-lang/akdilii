@@ -64,7 +64,7 @@ async def register(
             email    = email,
             password = hash_password(password),
             phone    = phone,
-            plan     = "starter"
+            plan     = "free"
         )
         db.add(merchant)
         db.commit()

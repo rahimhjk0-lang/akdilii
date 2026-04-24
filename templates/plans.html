@@ -13,6 +13,7 @@
 
 <div class="row g-4 justify-content-center">
 {% for key, plan in plans.items() %}
+{% if key != 'free' %}
 <div class="col-md-4">
     <div class="stat-card text-center {% if merchant.plan == key %}border border-success border-2{% endif %}">
         {% if merchant.plan == key %}
@@ -68,6 +69,7 @@
         {% endif %}
     </div>
 </div>
+{% endif %}
 {% endfor %}
 </div>
 
