@@ -10,11 +10,12 @@ def send_whatsapp(phone: str, message: str) -> bool:
             print("⚠️ Green API غير مضبوط")
             return False
 
-        phone = clean_phone(phone)
-        chat_id = phone.replace("+", "") + "@c.us"
+        instance = GREEN_API_INSTANCE.strip()
+        token    = GREEN_API_TOKEN.strip()
+        chat_id  = phone.replace("+", "") + "@c.us"
 
         resp = requests.post(
-            f"https://{GREEN_API_INSTANCE}.api.greenapi.com/waInstance{GREEN_API_INSTANCE}/sendMessage/{GREEN_API_TOKEN}",
+            f"https://api.greenapi.com/waInstance{instance}/sendMessage/{token}",
             json={"chatId": chat_id, "message": message},
             timeout=15
         )
