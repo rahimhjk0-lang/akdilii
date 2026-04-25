@@ -10,8 +10,38 @@
       <button onclick="document.getElementById('addOvl').style.display='flex'" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:8px 18px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">
         ➕ إضافة يدوي
       </button>
+      <button id="trackNowBtn" onclick="trackNow()" style="background:rgba(255,165,0,0.15);color:orange;border:1px solid rgba(255,165,0,0.4);border-radius:10px;padding:8px 18px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">
+        🔄 تتبع الآن
+      </button>
     </div>
 </div>
+
+<div id="trackMsg" style="display:none;margin:10px 0;padding:10px 16px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;"></div>
+
+<script>
+async function trackNow(){
+  const btn = document.getElementById('trackNowBtn');
+  const msg = document.getElementById('trackMsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التتبع...';
+  msg.style.display = 'none';
+  try {
+    const r = await fetch('/parcels/track-now', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.background = d.ok ? 'rgba(76,175,80,0.12)' : 'rgba(255,70,70,0.12)';
+    msg.style.border = d.ok ? '1px solid #4CAF50' : '1px solid #f55';
+    msg.style.color  = d.ok ? '#4CAF50' : '#f88';
+    msg.textContent  = d.msg;
+    btn.textContent  = '🔄 تتبع الآن';
+    btn.disabled     = false;
+    if(d.updated > 0) setTimeout(()=>location.reload(), 1500);
+  } catch(e) {
+    btn.textContent = '🔄 تتبع الآن';
+    btn.disabled    = false;
+  }
+}
+</script>
 
 <!-- نافذة إضافة طرد -->
 <div id="addOvl" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target.id==='addOvl')this.style.display='none'">

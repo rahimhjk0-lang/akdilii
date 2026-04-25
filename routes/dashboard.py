@@ -609,3 +609,104 @@ async def sync_parcels(
             return JSONResponse({"ok": False, "msg": f"خطأ: {str(e)} | {err_detail}"})
 
     return JSONResponse({"ok": True, "msg": f"✅ تمت المزامنة — {total_added} طرد جديد"})
+
+# ==========================================
+# تشغيل التتبع يدوياً الآن
+# ==========================================
+@router.post("/parcels/track-now")
+async def track_now(
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    """يشغل التتبع الآن لكل طرود هذا التاجر"""
+    from carriers.all_carriers import get_carrier
+    from models import TrackingEvent, Notification
+    from notifications import notify_customer
+
+    active_parcels = db.query(Parcel).filter(
+        Parcel.merchant_id == merchant.id,
+        Parcel.is_active   == True,
+        ~Parcel.current_status.in_(["delivered","returned"])
+    ).all()
+
+    if not active_parcels:
+        return JSONResponse({"ok": True, "msg": "ما فيه طرود نشطة للتتبع"})
+
+    updated = 0
+    notified = 0
+    skipped  = 0
+    errors   = []
+
+    for parcel in active_parcels:
+        try:
+            carrier_db = db.query(Carrier).filter(
+                Carrier.id == parcel.carrier_id,
+                Carrier.is_connected == True
+            ).first()
+            if not carrier_db:
+                skipped += 1
+                continue
+
+            carrier = get_carrier(
+                carrier_code = carrier_db.carrier_code,
+                api_key      = carrier_db.api_key or "",
+                api_id       = getattr(carrier_db, "api_id", "") or ""
+            )
+            result = carrier.track_parcel(parcel.tracking_number)
+            if not result:
+                skipped += 1
+                continue
+
+            new_status = result.get("status","")
+            location   = result.get("location","")
+            if not new_status:
+                skipped += 1
+                continue
+
+            already = db.query(Notification).filter(
+                Notification.parcel_id == parcel.id
+            ).first()
+
+            if new_status != parcel.current_status or not already:
+                event = TrackingEvent(
+                    parcel_id   = parcel.id,
+                    status      = new_status,
+                    location    = location,
+                    description = f"تتبع يدوي: {new_status}"
+                )
+                db.add(event)
+
+                # واتساب فقط إذا فيه رقم حقيقي
+                phone = (parcel.customer_phone or "").strip()
+                if phone and "*" not in phone and len(phone) >= 9:
+                    nr = notify_customer(
+                        phone           = phone,
+                        tracking_number = parcel.tracking_number,
+                        status          = new_status,
+                        delivery_type   = parcel.delivery_type or "home",
+                        merchant_name   = merchant.name or ""
+                    )
+                    if nr.get("whatsapp_sent"):
+                        db.add(Notification(
+                            parcel_id=parcel.id, channel="whatsapp",
+                            phone=phone, message=f"إشعار {new_status}", status="sent"
+                        ))
+                        notified += 1
+
+                parcel.current_status = new_status
+                parcel.wilaya         = location
+                if new_status in ["delivered","returned"]:
+                    parcel.is_active = False
+                updated += 1
+                db.commit()
+
+        except Exception as e:
+            errors.append(str(e)[:80])
+            db.rollback()
+            continue
+
+    msg = f"✅ تم التتبع — {updated} طرد تحدّث | {notified} واتساب أُرسل | {skipped} تخطى"
+    if errors:
+        msg += f" | ❌ {len(errors)} خطأ"
+    return JSONResponse({"ok": True, "msg": msg, "updated": updated, "notified": notified})
