@@ -33,7 +33,8 @@ SMS_API_KEY = os.getenv("SMS_API_KEY", "")
 SMS_SENDER  = os.getenv("SMS_SENDER", "Akdili")
 
 # ---- الجدولة ----
-TRACKING_INTERVAL_HOURS = 5  # كل 5 ساعات
+TRACKING_INTERVAL_HOURS = 0  # غير مستعمل
+TRACKING_INTERVAL_MINUTES = 30  # كل 30 دقيقة
 
 # ---- الباقات ----
 PLANS = {

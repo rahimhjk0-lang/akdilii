@@ -4,7 +4,7 @@ from database import SessionLocal
 from models import Parcel, Carrier, TrackingEvent, Notification
 from carriers.all_carriers import get_carrier
 from notifications import notify_customer
-from config import TRACKING_INTERVAL_HOURS
+from config import TRACKING_INTERVAL_MINUTES
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -139,13 +139,13 @@ scheduler = BackgroundScheduler()
 def start_scheduler():
     scheduler.add_job(
         func    = check_all_parcels,
-        trigger = IntervalTrigger(hours=TRACKING_INTERVAL_HOURS),
+        trigger = IntervalTrigger(minutes=TRACKING_INTERVAL_MINUTES),
         id      = "track_parcels",
         name    = "تتبع الطرود كل 5 ساعات",
         replace_existing = True
     )
     scheduler.start()
-    logger.info(f"⏰ الجدولة شغالة — كل {TRACKING_INTERVAL_HOURS} ساعات")
+    logger.info(f"⏰ الجدولة شغالة — كل {TRACKING_INTERVAL_MINUTES} دقيقة")
 
 def stop_scheduler():
     if scheduler.running:
