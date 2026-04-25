@@ -136,3 +136,44 @@ async def debug_wilayas(db: Session = Depends(get_db)):
     if not wilayas:
         return {"error": "ما رجع بيانات"}
     return {"count": len(wilayas), "first_3": wilayas[:3], "keys": list(wilayas[0].keys()) if wilayas else []}
+
+@app.post("/debug-create-parcel")
+async def debug_create_parcel(db: Session = Depends(get_db)):
+    """تست إنشاء طرد مباشرة في Yalidine بدون auth"""
+    from models import Carrier
+    from carriers.yalidine import YalidineCarrier
+    import time, random
+
+    carrier_db = db.query(Carrier).filter(
+        Carrier.carrier_code == "yalidine",
+        Carrier.is_connected == True
+    ).first()
+    if not carrier_db:
+        return {"error": "ما فيه Yalidine مربوط"}
+
+    yc = YalidineCarrier(
+        api_key=carrier_db.api_key or "",
+        api_id=getattr(carrier_db, "api_id", "") or ""
+    )
+
+    test_data = {
+        "order_id":        f"TEST-{int(time.time())}",
+        "firstname":       "تست",
+        "familyname":      "اكدلي",
+        "contact_phone":   "0555000000",
+        "address":         "تست",
+        "to_wilaya_name":  "Alger",
+        "to_commune_name": "Alger Centre",
+        "product_list":    "منتج تجريبي",
+        "price":           1000,
+        "is_stopdesk":     False,
+        "freeshipping":    False,
+    }
+
+    result = yc.create_parcel(test_data)
+    return {
+        "api_id_set": bool(carrier_db.api_id),
+        "api_key_len": len(carrier_db.api_key or ""),
+        "payload_sent": test_data,
+        "result": result
+    }
