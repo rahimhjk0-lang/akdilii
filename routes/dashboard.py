@@ -7,6 +7,7 @@ from models import Merchant, Carrier, Parcel, TrackingEvent, Notification
 from carriers.all_carriers import get_carrier, CARRIER_CLASSES
 from routes.auth import get_current_merchant
 from config import CARRIERS, PLANS
+from notifications import notify_customer
 
 router    = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -398,6 +399,20 @@ async def sync_parcels(
                     is_active       = not is_done,
                 )
                 db.add(new_parcel)
+                db.flush()  # نحصل على الـ id
+
+                # إرسال واتساب فوري عند أول مزامنة
+                if phone and phone != "—" and status_val in ["at_origin", "in_transit", "at_destination", "out_for_delivery"]:
+                    try:
+                        notify_customer(
+                            merchant   = merchant,
+                            parcel     = new_parcel,
+                            phone      = phone,
+                            status     = status_val,
+                        )
+                    except:
+                        pass
+
                 total_added += 1
 
             db.commit()
