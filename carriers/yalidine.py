@@ -76,10 +76,21 @@ class YalidineCarrier(BaseCarrier):
             )
             if resp.status_code == 200:
                 data = resp.json()
+                # Yalidine يرجع last_status مش status
+                raw = (
+                    data.get("last_status") or
+                    data.get("status") or
+                    data.get("etat") or ""
+                )
+                location = (
+                    data.get("last_update_wilaya") or
+                    data.get("to_wilaya_name") or
+                    data.get("wilaya") or ""
+                )
                 return {
                     "tracking_number": tracking_number,
-                    "status":   self.normalize_status(data.get("status", "")),
-                    "location": data.get("last_update_wilaya", ""),
+                    "status":   self.normalize_status(raw),
+                    "location": location,
                     "raw":      data
                 }
             return {}

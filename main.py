@@ -177,3 +177,26 @@ async def debug_create_parcel(db: Session = Depends(get_db)):
         "payload_sent": test_data,
         "result": result
     }
+
+@app.get("/debug-track/{tracking}")
+async def debug_track(tracking: str, db: Session = Depends(get_db)):
+    """تتبع طرد واحد وعرض الحالة الخام من Yalidine"""
+    from models import Carrier
+    from carriers.yalidine import YalidineCarrier
+    carrier_db = db.query(Carrier).filter(
+        Carrier.carrier_code == "yalidine",
+        Carrier.is_connected == True
+    ).first()
+    if not carrier_db:
+        return {"error": "ما فيه Yalidine"}
+    yc = YalidineCarrier(api_key=carrier_db.api_key or "", api_id=getattr(carrier_db,"api_id","") or "")
+    result = yc.track_parcel(tracking)
+    raw = result.get("raw", {})
+    return {
+        "tracking": tracking,
+        "status_normalized": result.get("status"),
+        "location": result.get("location"),
+        "raw_last_status": raw.get("last_status"),
+        "raw_status": raw.get("status"),
+        "raw_keys": list(raw.keys()) if raw else []
+    }
