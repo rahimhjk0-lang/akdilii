@@ -192,18 +192,19 @@ class YalidineCarrier(BaseCarrier):
             )
             if resp.status_code in [200, 201]:
                 data = resp.json()
-                # Yalidine يرجع list — نأخذ أول عنصر
-                if isinstance(data, list) and len(data) > 0:
+                # Yalidine يرجع {"order_id": {"success":true, "tracking":"yal-XXX",...}}
+                tracking = ""
+                if isinstance(data, dict):
+                    for key, val in data.items():
+                        if isinstance(val, dict):
+                            tracking = val.get("tracking") or val.get("tracking_number") or val.get("id") or ""
+                        elif isinstance(val, str) and val.startswith("yal-"):
+                            tracking = val
+                        if tracking:
+                            break
+                if not tracking and isinstance(data, list) and len(data) > 0:
                     item = data[0]
-                else:
-                    item = data if isinstance(data, dict) else {}
-                tracking = (
-                    item.get("tracking") or
-                    item.get("id") or
-                    item.get("tracking_number") or
-                    (item.get("data", {}) or {}).get("tracking", "") or
-                    str(item.get("parcel_id", ""))
-                )
+                    tracking = item.get("tracking") or item.get("tracking_number") or str(item.get("id",""))
                 return {"success": True, "tracking": tracking, "raw": data}
             else:
                 return {"success": False, "error": resp.text, "status_code": resp.status_code}
