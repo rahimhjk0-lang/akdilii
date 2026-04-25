@@ -79,10 +79,16 @@ async def health():
 async def check_env():
     import os
     key = os.getenv("CHARGILY_API_KEY", "")
+    green_instance = os.getenv("GREEN_API_INSTANCE", "")
+    green_token = os.getenv("GREEN_API_TOKEN", "")
     return {
         "has_key": bool(key),
         "key_preview": key[:10] + "..." if key else "EMPTY",
-        "app_url": os.getenv("APP_URL", "not set")
+        "app_url": os.getenv("APP_URL", "not set"),
+        "green_instance": repr(green_instance),
+        "green_token_len": len(green_token),
+        "green_token_has_newline": "\n" in green_token,
+        "green_token_preview": repr(green_token[:20])
     }
 
 @app.get("/debug-yalidine")
