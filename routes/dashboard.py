@@ -428,6 +428,8 @@ async def sync_parcels(
 
         except Exception as e:
             db.rollback()
-            return JSONResponse({"ok": False, "msg": f"خطأ: {str(e)}"})
+            import traceback
+            err_detail = traceback.format_exc()[-300:]
+            return JSONResponse({"ok": False, "msg": f"خطأ: {str(e)} | {err_detail}"})
 
     return JSONResponse({"ok": True, "msg": f"✅ تمت المزامنة — {total_added} طرد جديد"})
