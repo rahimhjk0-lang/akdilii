@@ -110,3 +110,29 @@ async def debug_yalidine(db: Session = Depends(get_db)):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+
+@app.get("/debug-communes")
+async def debug_communes(wilaya_id: int = 1, db: Session = Depends(get_db)):
+    from models import Carrier
+    from carriers.yalidine import YalidineCarrier
+    carrier_db = db.query(Carrier).filter(Carrier.carrier_code == "yalidine", Carrier.is_connected == True).first()
+    if not carrier_db:
+        return {"error": "ما فيه Yalidine مربوط"}
+    yc = YalidineCarrier(api_key=carrier_db.api_key or "", api_id=getattr(carrier_db, "api_id", "") or "")
+    communes = yc.get_communes(wilaya_id=wilaya_id)
+    if not communes:
+        return {"error": "ما رجع بيانات", "count": 0}
+    return {"count": len(communes), "first_3": communes[:3], "keys": list(communes[0].keys()) if communes else []}
+
+@app.get("/debug-wilayas")
+async def debug_wilayas(db: Session = Depends(get_db)):
+    from models import Carrier
+    from carriers.yalidine import YalidineCarrier
+    carrier_db = db.query(Carrier).filter(Carrier.carrier_code == "yalidine", Carrier.is_connected == True).first()
+    if not carrier_db:
+        return {"error": "ما فيه Yalidine مربوط"}
+    yc = YalidineCarrier(api_key=carrier_db.api_key or "", api_id=getattr(carrier_db, "api_id", "") or "")
+    wilayas = yc.get_wilayas()
+    if not wilayas:
+        return {"error": "ما رجع بيانات"}
+    return {"count": len(wilayas), "first_3": wilayas[:3], "keys": list(wilayas[0].keys()) if wilayas else []}
