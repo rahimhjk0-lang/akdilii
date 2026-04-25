@@ -293,11 +293,12 @@ async def add_parcel(
 # ==========================================
 @router.post("/parcels/delete")
 async def delete_parcel(
-    request:   Request,
-    parcel_id: int     = Form(...),
-    db:        Session = Depends(get_db),
-    merchant:  Merchant = Depends(get_current_merchant)
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
 ):
+    body = await request.json()
+    parcel_id = body.get("parcel_id")
     parcel = db.query(Parcel).filter(
         Parcel.id == parcel_id,
         Parcel.merchant_id == merchant.id
@@ -305,7 +306,8 @@ async def delete_parcel(
     if parcel:
         db.delete(parcel)
         db.commit()
-    return JSONResponse({"ok": True})
+        return JSONResponse({"ok": True})
+    return JSONResponse({"ok": False, "msg": "الطرد ما لقيناهش"})
 
 
 # ==========================================
