@@ -12,6 +12,7 @@ def send_whatsapp(phone: str, message: str) -> bool:
 
         instance = GREEN_API_INSTANCE.strip()
         token    = GREEN_API_TOKEN.strip()
+        phone    = clean_phone(phone)
         chat_id  = phone.replace("+", "") + "@c.us"
 
         resp = requests.post(
