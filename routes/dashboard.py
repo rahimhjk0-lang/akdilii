@@ -414,15 +414,16 @@ async def sync_parcels(
                 if phone and phone != "—" and not is_done:
                     try:
                         from notifications import notify_customer
-                        notify_customer(
+                        result = notify_customer(
                             phone           = phone,
                             tracking_number = str(tracking),
                             status          = status_val,
                             delivery_type   = dtype,
                             merchant_name   = merchant.name or ""
                         )
-                    except:
-                        pass
+                        print(f"📱 واتساب للطرد {tracking} | phone={phone} | status={status_val} | result={result}")
+                    except Exception as notif_err:
+                        print(f"❌ خطأ واتساب: {notif_err}")
 
                 total_added += 1
 
