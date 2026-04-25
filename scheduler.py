@@ -54,8 +54,16 @@ def check_all_parcels():
                 new_status = result.get("status", "")
                 location   = result.get("location", "")
 
-                # إذا تغيرت الحالة → بعث إشعار
-                if new_status and new_status != parcel.current_status:
+                if not new_status:
+                    continue
+
+                # تحقق: هل سبق وتبعثت رسالة لهذا الطرد؟
+                already_notified = db.query(Notification).filter(
+                    Notification.parcel_id == parcel.id
+                ).first()
+
+                # بعث رسالة إذا: تغيرت الحالة أو طرد جديد لم يُشعَر به بعد
+                if new_status != parcel.current_status or not already_notified:
                     logger.info(f"📦 {parcel.tracking_number}: {parcel.current_status} → {new_status}")
 
                     # حفظ التحديث في قاعدة البيانات

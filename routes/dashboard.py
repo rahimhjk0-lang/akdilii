@@ -399,20 +399,6 @@ async def sync_parcels(
                     is_active       = not is_done,
                 )
                 db.add(new_parcel)
-                db.flush()  # نحصل على الـ id
-
-                # إرسال واتساب فوري عند أول مزامنة
-                if phone and phone != "—" and status_val in ["at_origin", "in_transit", "at_destination", "out_for_delivery"]:
-                    try:
-                        notify_customer(
-                            merchant   = merchant,
-                            parcel     = new_parcel,
-                            phone      = phone,
-                            status     = status_val,
-                        )
-                    except:
-                        pass
-
                 total_added += 1
 
             db.commit()
