@@ -15,6 +15,7 @@ from routes.auth import router as auth_router
 from routes.dashboard import router as dashboard_router
 from routes.admin import router as admin_router
 from routes.billing import router as billing_router
+from routes.webhook import router as webhook_router
 
 # ==========================================
 # Keep-Alive — يمنع Render من النوم
@@ -57,6 +58,7 @@ app.include_router(auth_router)
 app.include_router(dashboard_router)
 app.include_router(admin_router)
 app.include_router(billing_router)
+app.include_router(webhook_router)
 
 templates = Jinja2Templates(directory="templates")
 
