@@ -3,12 +3,13 @@ import uvicorn
 import requests
 import threading
 import time
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
-from database import init_db
+from database import init_db, get_db
+from sqlalchemy.orm import Session
 from scheduler import start_scheduler, stop_scheduler
 from routes.auth import router as auth_router
 from routes.dashboard import router as dashboard_router
@@ -83,6 +84,20 @@ async def check_env():
         "key_preview": key[:10] + "..." if key else "EMPTY",
         "app_url": os.getenv("APP_URL", "not set")
     }
+
+@app.get("/debug-yalidine")
+async def debug_yalidine(db: Session = Depends(get_db)):
+    from models import Carrier
+    from carriers.all_carriers import get_carrier
+    carrier_db = db.query(Carrier).filter(Carrier.carrier_code == "yalidine", Carrier.is_connected == True).first()
+    if not carrier_db:
+        return {"error": "ما فيه Yalidine مربوط"}
+    carrier = get_carrier("yalidine", api_key=carrier_db.api_key or "", api_id=getattr(carrier_db, "api_id", "") or "")
+    parcels = carrier.get_parcels()
+    if not parcels:
+        return {"error": "ما رجع بيانات", "count": 0}
+    # أرجع أول طرد كاملاً
+    return {"first_parcel_keys": list(parcels[0].keys()), "first_parcel": parcels[0], "total": len(parcels)}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
