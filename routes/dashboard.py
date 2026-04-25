@@ -399,6 +399,22 @@ async def sync_parcels(
                     is_active       = not is_done,
                 )
                 db.add(new_parcel)
+                db.flush()
+
+                # رسالة واتساب فورية عند أول مزامنة
+                if phone and phone != "—" and not is_done:
+                    try:
+                        from notifications import notify_customer
+                        notify_customer(
+                            phone           = phone,
+                            tracking_number = str(tracking),
+                            status          = status_val,
+                            delivery_type   = dtype,
+                            merchant_name   = merchant.name or ""
+                        )
+                    except:
+                        pass
+
                 total_added += 1
 
             db.commit()
