@@ -159,30 +159,36 @@ class YalidineCarrier(BaseCarrier):
             _oid = str(parcel_data.get("order_id") or "").strip()
             if not _oid:
                 _oid = f"AKD-{int(_time.time())}-{_random.randint(1000,9999)}"
+
+            do_insurance  = bool(parcel_data.get("do_insurance", False))
+            has_exchange  = bool(parcel_data.get("has_exchange", False))
+            is_stopdesk   = bool(parcel_data.get("is_stopdesk", False))
+            stopdesk_id   = parcel_data.get("stopdesk_id")
+
             payload = {
-                "order_id":        _oid,
-                "firstname":       parcel_data.get("firstname", ""),
-                "familyname":      parcel_data.get("familyname", ""),
-                "contact_phone":   parcel_data.get("contact_phone", ""),
-                "address":         parcel_data.get("address", ""),
-                "to_commune_name": parcel_data.get("to_commune_name", ""),
-                "to_wilaya_name":  parcel_data.get("to_wilaya_name", ""),
-                "product_list":    parcel_data.get("product_list", ""),
-                "price":           float(parcel_data.get("price", 0)),
-                "do_insurance":    False,
-                "declared_value":  0,
-                "height":          float(parcel_data.get("height", 1)),
-                "width":           float(parcel_data.get("width", 1)),
-                "length":          float(parcel_data.get("length", 1)),
-                "weight":          float(parcel_data.get("weight", 0.5)),
-                "freeshipping":    bool(parcel_data.get("freeshipping", False)),
-                "is_stopdesk":     bool(parcel_data.get("is_stopdesk", False)),
-                "stopdesk_id":     int(parcel_data.get("stopdesk_id", 0)) if parcel_data.get("stopdesk_id") else None,
-                "has_exchange":    False,
+                "order_id":           _oid,
+                "from_wilaya_name":   parcel_data.get("from_wilaya_name", "Alger"),
+                "firstname":          parcel_data.get("firstname", ""),
+                "familyname":         parcel_data.get("familyname", ""),
+                "contact_phone":      parcel_data.get("contact_phone", ""),
+                "address":            parcel_data.get("address", ""),
+                "to_commune_name":    parcel_data.get("to_commune_name", ""),
+                "to_wilaya_name":     parcel_data.get("to_wilaya_name", ""),
+                "product_list":       parcel_data.get("product_list", ""),
+                "price":              float(parcel_data.get("price", 0)),
+                "do_insurance":       do_insurance,
+                "declared_value":     float(parcel_data.get("declared_value", 0)) if do_insurance else 0,
+                "height":             float(parcel_data.get("height", 10)),
+                "width":              float(parcel_data.get("width", 15)),
+                "length":             float(parcel_data.get("length", 20)),
+                "weight":             float(parcel_data.get("weight", 0.5)),
+                "freeshipping":       bool(parcel_data.get("freeshipping", False)),
+                "is_stopdesk":        is_stopdesk,
+                "has_exchange":       has_exchange,
+                "product_to_collect": parcel_data.get("product_to_collect", "") if has_exchange else "",
             }
-            # إزالة stopdesk_id إذا كان None
-            if payload["stopdesk_id"] is None:
-                del payload["stopdesk_id"]
+            if is_stopdesk and stopdesk_id:
+                payload["stopdesk_id"] = int(stopdesk_id)
 
             resp = requests.post(
                 f"{self.BASE_URL}/parcels/",
