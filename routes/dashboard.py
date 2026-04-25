@@ -315,9 +315,16 @@ def map_yalidine_status(status: str) -> str:
     mapping = {
         "1": "at_origin", "2": "in_transit", "3": "at_destination",
         "4": "out_for_delivery", "5": "delivered", "6": "failed_attempt",
-        "7": "returned", "Ready": "at_origin", "En route": "in_transit",
-        "Arrived": "at_destination", "Out for delivery": "out_for_delivery",
-        "Delivered": "delivered", "Failed": "failed_attempt", "Returned": "returned",
+        "7": "returned",
+        # last_status من Yalidine بالفرنسية
+        "En préparation":        "at_origin",
+        "Collecté":              "at_origin",
+        "En transit":            "in_transit",
+        "Arrivé wilaya":         "at_destination",
+        "En cours de livraison": "out_for_delivery",
+        "Livré":                 "delivered",
+        "Tentative échouée":     "failed_attempt",
+        "Retourné":              "returned",
     }
     return mapping.get(str(status), "at_origin")
 
@@ -377,15 +384,13 @@ async def sync_parcels(
                 if db.query(Parcel).filter(Parcel.tracking_number == str(tracking)).first():
                     continue
                 # أضف الطرد
-                # حقول Yalidine الصحيحة
-                name  = (p.get("firstname", "") + " " + p.get("familyname", "")).strip() or p.get("customer_name", "") or p.get("name", "") or "—"
-                phone = (p.get("phone", "") or p.get("customer_phone", "") or 
-                         p.get("recipient_phone", "") or p.get("telephone", "") or 
-                         p.get("tel", "") or p.get("mobile", "") or p.get("receiver_phone", "") or "—")
-                wilaya_val = str(p.get("to_wilaya_id", "") or p.get("wilaya_id", "") or p.get("wilaya", "") or "")
+                                # حقول Yalidine الصحيحة
+                name  = (p.get("firstname", "") + " " + p.get("familyname", "")).strip() or "—"
+                phone = p.get("contact_phone", "") or "—"
+                wilaya_val = str(p.get("to_wilaya_id", "") or p.get("wilaya_id", "") or "")
+                raw_status = p.get("last_status", "") or p.get("status", "")
                 is_stopdesk = p.get("is_stopdesk", False)
                 dtype = "office" if is_stopdesk else "home"
-                raw_status = p.get("status", "1") or p.get("current_status", "1")
                 status_val = map_yalidine_status(str(raw_status))
                 is_done = status_val in ["delivered", "returned"]
 
