@@ -491,7 +491,6 @@ def map_yalidine_status(status: str) -> str:
         "1": "at_origin", "2": "in_transit", "3": "at_destination",
         "4": "out_for_delivery", "5": "delivered", "6": "failed_attempt",
         "7": "returned",
-        # last_status من Yalidine بالفرنسية
         "En préparation":        "at_origin",
         "Collecté":              "at_origin",
         "En transit":            "in_transit",
@@ -500,8 +499,119 @@ def map_yalidine_status(status: str) -> str:
         "Livré":                 "delivered",
         "Tentative échouée":     "failed_attempt",
         "Retourné":              "returned",
+        # status عام
+        "at_origin":         "at_origin",
+        "in_transit":        "in_transit",
+        "at_destination":    "at_destination",
+        "out_for_delivery":  "out_for_delivery",
+        "delivered":         "delivered",
+        "failed_attempt":    "failed_attempt",
+        "returned":          "returned",
+        # Maystro
+        "TO_PREPARE":  "at_origin",
+        "TO_SHIP":     "in_transit",
+        "SHIPPED":     "in_transit",
+        "AT_HUB":      "at_destination",
+        "TO_DELIVER":  "out_for_delivery",
+        "DELIVERED":   "delivered",
+        "FAILED":      "failed_attempt",
+        "RETURNED":    "returned",
+        # ZR Express / Ecotrack / Procolis / Guepex
+        "pending":     "at_origin",
+        "new":         "at_origin",
+        "picked_up":   "at_origin",
+        "preparing":   "at_origin",
+        "created":     "at_origin",
+        "transit":     "in_transit",
+        "in_transit":  "in_transit",
+        "hub":         "at_destination",
+        "arrived":     "at_destination",
+        "delivering":  "out_for_delivery",
+        "delivery":    "out_for_delivery",
+        "out_for_delivery": "out_for_delivery",
+        "livré":       "delivered",
+        "undelivered": "failed_attempt",
+        "failed":      "failed_attempt",
+        "echec":       "failed_attempt",
+        "retourné":    "returned",
     }
-    return mapping.get(str(status), "at_origin")
+    return mapping.get(str(status), mapping.get(str(status).lower(), "in_transit"))
+
+
+def extract_parcel_data(p: dict, carrier_code: str) -> dict:
+    """استخراج بيانات الطرد من أي شركة توصيل"""
+
+    # ---- رقم التتبع ----
+    tracking_fields = {
+        "yalidine":      ["tracking"],
+        "zr_express":    ["tracking", "barcode", "tracking_number", "id"],
+        "ecotrack":      ["tracking_code", "tracking", "barcode", "id"],
+        "procolis":      ["tracking", "barcode", "numero", "id"],
+        "maystro":       ["tracking", "barcode", "id"],
+        "guepex":        ["tracking", "barcode", "id"],
+        "ecom_delivery": ["tracking", "barcode", "numero_suivi", "id"],
+    }
+    tracking = ""
+    for f in tracking_fields.get(carrier_code, ["tracking","id"]):
+        tracking = str(p.get(f, "") or "")
+        if tracking and tracking != "None": break
+
+    # ---- الاسم ----
+    if carrier_code == "yalidine":
+        name = (p.get("firstname","") + " " + p.get("familyname","")).strip()
+    else:
+        for f in ["customer_name","recipient_name","client_name","name","nom","fullname","nom_prenom"]:
+            name = str(p.get(f,"") or "")
+            if name and name != "None": break
+        else: name = ""
+
+    # ---- الهاتف ----
+    phone_fields = {
+        "yalidine":      ["contact_phone"],
+        "zr_express":    ["phone","contact_phone","client_phone","telephone"],
+        "ecotrack":      ["phone","recipient_phone","contact_phone","client_phone"],
+        "procolis":      ["phone","client_phone","contact_phone","telephone"],
+        "maystro":       ["customer_phone","phone","contact_phone"],
+        "guepex":        ["phone","contact_phone","client_phone"],
+        "ecom_delivery": ["phone","telephone","contact_phone","client_phone"],
+    }
+    phone = ""
+    for f in phone_fields.get(carrier_code, ["phone","contact_phone"]):
+        phone = str(p.get(f,"") or "")
+        if phone and phone != "None" and "*" not in phone: break
+
+    # ---- الحالة ----
+    status_fields = {
+        "yalidine":      ["last_status","status"],
+        "zr_express":    ["status","etat","last_status"],
+        "ecotrack":      ["status","etat","last_status"],
+        "procolis":      ["status","etat"],
+        "maystro":       ["status","etat","state"],
+        "guepex":        ["status","etat","last_status"],
+        "ecom_delivery": ["status","etat","statut"],
+    }
+    raw_status = ""
+    for f in status_fields.get(carrier_code, ["status","last_status"]):
+        raw_status = str(p.get(f,"") or "")
+        if raw_status and raw_status != "None": break
+
+    # ---- الولاية ----
+    wilaya = str(
+        p.get("to_wilaya_name") or p.get("wilaya") or
+        p.get("to_wilaya_id") or p.get("destination_wilaya") or ""
+    )
+
+    is_stopdesk = bool(p.get("is_stopdesk") or p.get("stopdesk") or False)
+
+    return {
+        "tracking":    tracking,
+        "name":        name or "—",
+        "phone":       phone or "—",
+        "raw_status":  raw_status,
+        "status":      map_yalidine_status(raw_status),
+        "wilaya":      wilaya,
+        "is_stopdesk": is_stopdesk,
+    }
 
 @router.post("/carriers/sync")
 async def sync_parcels(
@@ -558,16 +668,19 @@ async def sync_parcels(
                 # إذا موجود من قبل — تخطى
                 if db.query(Parcel).filter(Parcel.tracking_number == str(tracking)).first():
                     continue
-                # أضف الطرد
-                                # حقول Yalidine الصحيحة
-                name  = (p.get("firstname", "") + " " + p.get("familyname", "")).strip() or "—"
-                phone = p.get("contact_phone", "") or "—"
-                wilaya_val = str(p.get("to_wilaya_id", "") or p.get("wilaya_id", "") or "")
-                raw_status = p.get("last_status", "") or p.get("status", "")
-                is_stopdesk = p.get("is_stopdesk", False)
-                dtype = "office" if is_stopdesk else "home"
-                status_val = map_yalidine_status(str(raw_status))
-                is_done = status_val in ["delivered", "returned"]
+                # أضف الطرد — استخدم extract_parcel_data لكل الشركات
+                extracted = extract_parcel_data(p, carrier_db.carrier_code)
+                tracking  = extracted["tracking"]
+                if not tracking:
+                    continue
+                if db.query(Parcel).filter(Parcel.tracking_number == tracking).first():
+                    continue
+                name       = extracted["name"]
+                phone      = extracted["phone"]
+                wilaya_val = extracted["wilaya"]
+                status_val = extracted["status"]
+                dtype      = "office" if extracted["is_stopdesk"] else "home"
+                is_done    = status_val in ["delivered", "returned"]
 
                 new_parcel = Parcel(
                     merchant_id     = merchant.id,
