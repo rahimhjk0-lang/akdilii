@@ -7,7 +7,22 @@
         <small class="text-muted">{{ parcel.customer_name }} — {{ parcel.customer_phone }}</small>
     </div>
     <a href="/parcels" class="btn btn-outline-secondary btn-sm">← رجوع</a>
+    <button onclick="deleteParcel({{ parcel.id }})" class="btn btn-danger btn-sm">🗑️ حذف</button>
 </div>
+
+<script>
+async function deleteParcel(id) {
+    if (!confirm('تأكيد حذف الطرد؟')) return;
+    const r = await fetch('/parcels/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({parcel_id: id})
+    });
+    const d = await r.json();
+    if (d.ok) { window.location.href = '/parcels'; }
+    else { alert(d.msg || 'خطأ'); }
+}
+</script>
 
 <div class="row g-4">
     <!-- معلومات الطرد -->
