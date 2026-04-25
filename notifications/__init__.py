@@ -136,22 +136,25 @@ def notify_customer(
 # دوال مساعدة
 # ==========================================
 def clean_phone(phone: str) -> str:
-    """تنظيف رقم الهاتف"""
-    phone = phone.strip().replace(" ", "").replace("-", "")
+    """تنظيف رقم الهاتف — أرقام فقط"""
+    import re
+    phone = phone.strip()
+    # نحي كل شي ماعدا الأرقام
+    digits = re.sub(r'\D', '', phone)
 
-    # إذا يبدأ بـ 0 → حوله لـ 213
-    if phone.startswith("0"):
-        phone = "213" + phone[1:]
+    # إذا يبدأ بـ 213 مباشرة
+    if digits.startswith("213"):
+        return "+" + digits
+
+    # إذا يبدأ بـ 0 → نحي الـ 0 ونضيف 213
+    if digits.startswith("0"):
+        digits = "213" + digits[1:]
 
     # إذا ما فيهش كود الدولة
-    if not phone.startswith("+") and not phone.startswith("213"):
-        phone = "213" + phone
+    if not digits.startswith("213"):
+        digits = "213" + digits
 
-    # أضف + في البداية
-    if not phone.startswith("+"):
-        phone = "+" + phone
-
-    return phone
+    return "+" + digits
 
 
 def clean_for_sms(message: str) -> str:
