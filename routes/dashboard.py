@@ -378,8 +378,10 @@ async def sync_parcels(
                     continue
                 # أضف الطرد
                 # حقول Yalidine الصحيحة
-                name  = (p.get("firstname", "") + " " + p.get("familyname", "")).strip() or p.get("customer_name", "") or "—"
-                phone = p.get("phone", "") or p.get("customer_phone", "") or "—"
+                name  = (p.get("firstname", "") + " " + p.get("familyname", "")).strip() or p.get("customer_name", "") or p.get("name", "") or "—"
+                phone = (p.get("phone", "") or p.get("customer_phone", "") or 
+                         p.get("recipient_phone", "") or p.get("telephone", "") or 
+                         p.get("tel", "") or p.get("mobile", "") or p.get("receiver_phone", "") or "—")
                 wilaya_val = str(p.get("to_wilaya_id", "") or p.get("wilaya_id", "") or p.get("wilaya", "") or "")
                 is_stopdesk = p.get("is_stopdesk", False)
                 dtype = "office" if is_stopdesk else "home"
