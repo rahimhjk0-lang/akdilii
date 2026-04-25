@@ -291,6 +291,23 @@ async def add_parcel(
 # ==========================================
 # حذف طرد
 # ==========================================
+@router.post("/parcels/update-phone")
+async def update_phone(
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    body = await request.json()
+    parcel = db.query(Parcel).filter(
+        Parcel.id == body.get("parcel_id"),
+        Parcel.merchant_id == merchant.id
+    ).first()
+    if parcel:
+        parcel.customer_phone = body.get("phone", "")
+        db.commit()
+        return JSONResponse({"ok": True})
+    return JSONResponse({"ok": False})
+
 @router.post("/parcels/delete")
 async def delete_parcel(
     request:  Request,

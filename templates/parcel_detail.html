@@ -31,7 +31,14 @@ async function deleteParcel(id) {
             <h6 class="fw-700 mb-3">معلومات الطرد</h6>
             <table class="table table-borderless table-sm">
                 <tr><td class="text-muted">الزبون:</td><td><b>{{ parcel.customer_name }}</b></td></tr>
-                <tr><td class="text-muted">الهاتف:</td><td>{{ parcel.customer_phone }}</td></tr>
+                <tr><td class="text-muted">الهاتف:</td><td>
+                    <span id="phone-display">{{ parcel.customer_phone }}</span>
+                    <button onclick="editPhone()" class="btn btn-sm btn-outline-primary ms-2">✏️</button>
+                    <span id="phone-edit" style="display:none">
+                        <input id="phone-input" class="form-control form-control-sm d-inline w-auto" value="{{ parcel.customer_phone }}">
+                        <button onclick="savePhone({{ parcel.id }})" class="btn btn-sm btn-success">حفظ</button>
+                    </span>
+                </td></tr>
                 <tr><td class="text-muted">الشركة:</td><td>{{ parcel.carrier.carrier_name if parcel.carrier else '—' }}</td></tr>
                 <tr><td class="text-muted">نوع التوصيل:</td><td>
                     {% if parcel.delivery_type == 'home' %}🏠 منزل{% else %}🏢 مكتب{% endif %}
@@ -111,4 +118,30 @@ async function deleteParcel(id) {
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function editPhone() {
+    document.getElementById('phone-display').style.display='none';
+    document.querySelector('button[onclick="editPhone()"]').style.display='none';
+    document.getElementById('phone-edit').style.display='inline';
+}
+async function savePhone(id) {
+    const phone = document.getElementById('phone-input').value;
+    const r = await fetch('/parcels/update-phone', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({parcel_id:id, phone:phone})
+    });
+    const d = await r.json();
+    if(d.ok) {
+        document.getElementById('phone-display').innerText = phone;
+        document.getElementById('phone-display').style.display='inline';
+        document.querySelector('button[onclick="editPhone()"]').style.display='inline';
+        document.getElementById('phone-edit').style.display='none';
+        alert('✅ تم حفظ الرقم');
+    }
+}
+</script>
 {% endblock %}
