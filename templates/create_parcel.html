@@ -1,260 +1,279 @@
 {% extends "base.html" %}
 {% block title %}إنشاء طرد جديد{% endblock %}
 {% block content %}
-
 <style>
-.form-section { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:22px; margin-bottom:18px; }
-.form-section h6 { color:#4CAF50; font-weight:800; margin-bottom:16px; font-size:14px; }
-.form-label-s { font-size:13px; color:#e2e8f0; font-weight:700; display:block; margin-bottom:5px; }
-.form-input { width:100%; padding:10px 13px; border-radius:9px; background:#fff; border:2px solid #222; color:#111; font-family:'Cairo',sans-serif; font-size:13px; margin-bottom:12px; box-sizing:border-box; transition:border-color .2s, box-shadow .2s; }
-.form-input:focus { border-color:#4CAF50; outline:none; background:#fff; box-shadow:0 0 0 3px rgba(76,175,80,0.18); }
-.form-input::placeholder { color:#aaa; }
-.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-.toggle-btn { display:flex; border-radius:9px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); margin-bottom:12px; }
-.toggle-btn button { flex:1; padding:9px; border:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; transition:all .2s; }
-.toggle-btn .t-home { background:rgba(76,175,80,0.15); color:#4CAF50; }
-.toggle-btn .t-office { background:transparent; color:rgba(255,255,255,0.4); }
-.toggle-btn.is-office .t-home { background:transparent; color:rgba(255,255,255,0.4); }
-.toggle-btn.is-office .t-office { background:rgba(255,165,0,0.15); color:orange; }
-.submit-btn { width:100%; padding:13px; border-radius:10px; background:linear-gradient(135deg,#4CAF50,#2196F3); border:none; color:#fff; font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; cursor:pointer; transition:opacity .2s; }
-.submit-btn:hover { opacity:.9; }
-.submit-btn:disabled { opacity:.5; cursor:not-allowed; }
-#stopdesk-section { display:none; }
-#result-box { display:none; border-radius:12px; padding:16px; margin-top:14px; text-align:center; font-weight:700; }
-.res-ok { background:rgba(76,175,80,0.15); border:1px solid #4CAF50; color:#4CAF50; }
-.res-err { background:rgba(255,70,70,0.15); border:1px solid #ff4646; color:#ff7070; }
+.pg-title{color:#fff;font-size:18px;font-weight:800;margin-bottom:20px}
+.back-link{color:rgba(255,255,255,.45);text-decoration:none;font-size:13px}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:22px;margin-bottom:16px}
+.card-title{color:#4CAF50;font-weight:800;font-size:14px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.fl{font-size:13px;color:#dde;font-weight:700;display:block;margin-bottom:5px}
+.fi{width:100%;padding:10px 13px;border-radius:9px;background:#fff;border:2px solid #222;color:#111;font-family:'Cairo',sans-serif;font-size:13px;margin-bottom:13px;box-sizing:border-box;transition:border-color .2s}
+.fi:focus{border-color:#4CAF50;outline:none;box-shadow:0 0 0 3px rgba(76,175,80,.15)}
+.fi::placeholder{color:#aaa}
+.fi option{background:#1a1a2e;color:#fff}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.dt-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px}
+.dt-btn{padding:14px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:all .2s;text-align:center}
+.dt-btn.ah{border-color:#4CAF50;background:rgba(76,175,80,.12);color:#4CAF50}
+.dt-btn.ao{border-color:orange;background:rgba(255,165,0,.12);color:orange}
+.chk-row{display:flex;align-items:center;gap:8px;margin-bottom:13px;font-size:13px;color:#dde}
+.chk-row input[type=checkbox]{width:17px;height:17px;accent-color:#4CAF50;cursor:pointer}
+.radio-row{display:flex;gap:16px;margin-bottom:13px}
+.radio-row label{display:flex;align-items:center;gap:6px;font-size:13px;color:#dde;cursor:pointer}
+.radio-row input[type=radio]{accent-color:#4CAF50;width:16px;height:16px}
+.wtog{display:flex;border-radius:9px;overflow:hidden;border:2px solid #222;margin-bottom:13px}
+.wtog button{flex:1;padding:9px;border:none;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;background:#fff;color:#333;transition:all .2s}
+.wtog button.wa{background:#222;color:#fff}
+.submit-btn{width:100%;padding:14px;border-radius:11px;background:linear-gradient(135deg,#4CAF50,#2196F3);border:none;color:#fff;font-family:'Cairo',sans-serif;font-weight:800;font-size:15px;cursor:pointer;margin-top:6px;transition:opacity .2s}
+.submit-btn:hover{opacity:.9}
+.submit-btn:disabled{opacity:.45;cursor:not-allowed}
+#res{display:none;border-radius:12px;padding:16px;margin-top:14px;text-align:center;font-weight:700}
+.rok{background:rgba(76,175,80,.15);border:1px solid #4CAF50;color:#4CAF50}
+.rerr{background:rgba(255,70,70,.15);border:1px solid #f55;color:#f88}
 </style>
 
-<div class="topbar" style="margin-bottom:20px;">
-  <div>
-    <a href="/parcels" style="color:rgba(255,255,255,0.4);text-decoration:none;font-size:13px;">◀ الطرود</a>
-    <h5 class="mb-0 fw-700" style="margin-top:4px;">📦 إنشاء طرد جديد</h5>
-  </div>
+<div style="margin-bottom:18px">
+  <a href="/parcels" class="back-link">◀ الطرود</a>
+  <div class="pg-title" style="margin-top:4px">📦 إنشاء طرد جديد</div>
 </div>
 
-<div style="max-width:640px;margin:0 auto;">
+<div style="max-width:660px;margin:0 auto">
 
-  <!-- بيانات الزبون -->
-  <div class="form-section">
-    <h6>👤 بيانات الزبون</h6>
-    <div class="form-row">
-      <div>
-        <label class="form-label-s">الاسم الأول *</label>
-        <input id="f_firstname" class="form-input" type="text" placeholder="مثال: أحمد">
-      </div>
-      <div>
-        <label class="form-label-s">اللقب *</label>
-        <input id="f_familyname" class="form-input" type="text" placeholder="مثال: بن علي">
-      </div>
+  <!-- نوع التوصيل -->
+  <div class="card">
+    <div class="card-title">🚚 نوع التوصيل</div>
+    <div class="dt-wrap">
+      <button class="dt-btn ah" id="btn-home" onclick="setDel('home')">🏠 توصيل للمنزل</button>
+      <button class="dt-btn"   id="btn-off"  onclick="setDel('office')">🏢 سحب من مكتب (Stop desk)</button>
     </div>
-    <label class="form-label-s">رقم الهاتف *</label>
-    <input id="f_phone" class="form-input" type="tel" placeholder="0XXXXXXXXX" maxlength="10">
-    <label class="form-label-s">العنوان (اختياري)</label>
-    <input id="f_address" class="form-input" type="text" placeholder="الشارع، الحي...">
+    <input type="hidden" id="f_stopdesk" value="false">
   </div>
 
-  <!-- الوجهة -->
-  <div class="form-section">
-    <h6>📍 الوجهة</h6>
-    <div class="form-row">
+  <!-- المرسل -->
+  <div class="card">
+    <div class="card-title">📤 المرسل (Expéditeur)</div>
+    <label class="fl">ولاية الإرسال *</label>
+    <select id="f_from_wil" class="fi">
+      <option value="">-- اختر --</option>
+      {% for w in wilayas %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <!-- المستلم -->
+  <div class="card">
+    <div class="card-title">👤 المستلم (Destinataire)</div>
+    <div class="row2">
       <div>
-        <label class="form-label-s">الولاية *</label>
-        <select id="f_wilaya" class="form-input" onchange="loadCommunes(this)">
-          <option value="">-- اختر الولاية --</option>
-          {% for w in wilayas %}
-          <option value="{{ w.id }}" data-name="{{ w.name }}">{{ w.id }} - {{ w.name }}</option>
-          {% endfor %}
+        <label class="fl">اللقب (Nom) *</label>
+        <input id="f_fam" class="fi" type="text" placeholder="بن علي">
+      </div>
+      <div>
+        <label class="fl">الاسم (Prénom) *</label>
+        <input id="f_first" class="fi" type="text" placeholder="أحمد">
+      </div>
+    </div>
+    <label class="fl">رقم الهاتف 1 *</label>
+    <input id="f_phone" class="fi" type="tel" placeholder="0XXXXXXXXX" maxlength="10">
+    <label class="fl" style="color:rgba(200,220,200,.55)">رقم الهاتف 2 (اختياري)</label>
+    <input id="f_phone2" class="fi" type="tel" placeholder="0XXXXXXXXX" maxlength="10">
+    <div class="row2">
+      <div>
+        <label class="fl">الولاية *</label>
+        <select id="f_wil" class="fi" onchange="loadComm(this)">
+          <option value="">-- اختر نوع التوصيل أولاً --</option>
         </select>
       </div>
       <div>
-        <label class="form-label-s">البلدية *</label>
-        <select id="f_commune" class="form-input">
+        <label class="fl">البلدية *</label>
+        <select id="f_comm" class="fi">
           <option value="">-- اختر الولاية أولاً --</option>
         </select>
       </div>
     </div>
-
-    <!-- نوع التسليم -->
-    <label class="form-label-s">نوع التسليم *</label>
-    <div class="toggle-btn" id="deliveryToggle">
-      <button class="t-home" onclick="setDelivery('home')">🏠 تسليم للمنزل</button>
-      <button class="t-office" onclick="setDelivery('office')">🏢 سحب من المكتب</button>
-    </div>
-    <input type="hidden" id="f_is_stopdesk" value="false">
-
-    <!-- معرف المكتب (يظهر فقط عند اختيار مكتب) -->
-    <div id="stopdesk-section">
-      <label class="form-label-s">رقم مكتب الاستلام (Stopdesk ID)</label>
-      <input id="f_stopdesk_id" class="form-input" type="number" placeholder="رقم المكتب من Yalidine">
+    <label class="fl">العنوان (L'adresse)</label>
+    <input id="f_addr" class="fi" type="text" placeholder="الشارع، الحي...">
+    <div id="stopdesk-sec" style="display:none">
+      <label class="fl">🏢 رقم مكتب الاستلام (Stopdesk ID)</label>
+      <input id="f_sdid" class="fi" type="number" placeholder="ID المكتب من Yalidine">
     </div>
   </div>
 
-  <!-- بيانات المنتج -->
-  <div class="form-section">
-    <h6>📦 بيانات الشحنة</h6>
-    <label class="form-label-s">وصف المنتجات *</label>
-    <input id="f_product_list" class="form-input" type="text" placeholder="مثال: حذاء رياضي أبيض مقاس 42">
-    <div class="form-row">
+  <!-- الطرد -->
+  <div class="card">
+    <div class="card-title">📦 تفاصيل الطرد (Le colis)</div>
+    <label class="fl">المنتج (Produit) *</label>
+    <input id="f_prod" class="fi" type="text" placeholder="مثال: حذاء رياضي أبيض مقاس 42">
+    <div class="row2">
       <div>
-        <label class="form-label-s">سعر الاسترداد (دج) *</label>
-        <input id="f_price" class="form-input" type="number" placeholder="مثال: 3500" min="0">
+        <label class="fl">رقم الطلب (اختياري)</label>
+        <input id="f_oid" class="fi" type="text" placeholder="يُولَّد تلقائياً">
       </div>
       <div>
-        <label class="form-label-s">رقم الطلب (اختياري)</label>
-        <input id="f_order_id" class="form-input" type="text" placeholder="يُولَّد تلقائياً إذا تُرك فارغاً">
+        <label class="fl">سعر الطرد (دج) *</label>
+        <input id="f_price" class="fi" type="number" placeholder="3500" min="0">
       </div>
     </div>
-    <div>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:rgba(255,255,255,0.6);">
-        <input type="checkbox" id="f_freeshipping" style="width:16px;height:16px;accent-color:#4CAF50;">
-        شحن مجاني (التاجر يدفع أجرة التوصيل)
-      </label>
+
+    <div class="chk-row" style="opacity:.4;pointer-events:none">
+      <input type="checkbox" id="f_free">
+      <span>شحن مجاني <span style="color:rgba(255,255,255,.3);font-size:11px">(رصيدك 0 دج)</span></span>
+    </div>
+
+    <div class="chk-row">
+      <input type="checkbox" id="f_exch" onchange="toggleSec('exch-sec',this.checked)">
+      <span>طلب استبدال بعد التوصيل</span>
+    </div>
+    <div id="exch-sec" style="display:none">
+      <label class="fl">وصف المنتج المُستبدَل</label>
+      <input id="f_exchprod" class="fi" type="text" placeholder="مثال: نفس الحذاء مقاس 43">
+    </div>
+
+    <label class="fl" style="margin-bottom:6px">تأمين الطرد (Assurance)</label>
+    <div class="radio-row">
+      <label><input type="radio" name="ins" id="ins_no" value="no" checked onchange="toggleSec('ins-sec',false)"> لا — تعويض أقصاه 5000 دج</label>
+      <label><input type="radio" name="ins" id="ins_yes" value="yes" onchange="toggleSec('ins-sec',true)"> نعم — تعويض كامل</label>
+    </div>
+    <div id="ins-sec" style="display:none">
+      <label class="fl">القيمة المُصرَّح بها (دج)</label>
+      <input id="f_decval" class="fi" type="number" placeholder="مثال: 8000" min="0">
     </div>
   </div>
 
-  <!-- أبعاد الطرد (اختياري) -->
-  <div class="form-section">
-    <h6>📐 أبعاد الطرد <span style="color:rgba(255,255,255,0.3);font-weight:400;">(اختياري)</span></h6>
-    <div class="form-row-3">
-      <div>
-        <label class="form-label-s">الطول (سم)</label>
-        <input id="f_length" class="form-input" type="number" placeholder="20" value="20" min="1">
-      </div>
-      <div>
-        <label class="form-label-s">العرض (سم)</label>
-        <input id="f_width" class="form-input" type="number" placeholder="15" value="15" min="1">
-      </div>
-      <div>
-        <label class="form-label-s">الارتفاع (سم)</label>
-        <input id="f_height" class="form-input" type="number" placeholder="10" value="10" min="1">
-      </div>
+  <!-- الأبعاد والوزن -->
+  <div class="card">
+    <div class="card-title">📐 الأبعاد والوزن (Dimensions & poids)</div>
+    <label class="fl" style="margin-bottom:8px">هل يتجاوز الطرد 5 كغ؟</label>
+    <div class="wtog">
+      <button onclick="setHeavy(false)" id="w-no"  class="wa">لا</button>
+      <button onclick="setHeavy(true)"  id="w-yes"        >نعم</button>
     </div>
-    <label class="form-label-s">الوزن (كغ)</label>
-    <input id="f_weight" class="form-input" type="number" placeholder="0.5" value="0.5" step="0.1" min="0.1" style="max-width:200px;">
+    <div class="row3">
+      <div><label class="fl">الطول (سم)</label><input id="f_len" class="fi" type="number" value="20" min="1"></div>
+      <div><label class="fl">العرض (سم)</label><input id="f_wid" class="fi" type="number" value="15" min="1"></div>
+      <div><label class="fl">الارتفاع (سم)</label><input id="f_hei" class="fi" type="number" value="10" min="1"></div>
+    </div>
+    <label class="fl">الوزن (كغ)</label>
+    <input id="f_wgt" class="fi" type="number" value="0.5" step="0.1" min="0.1" style="max-width:200px">
   </div>
 
-  <!-- زر الإرسال -->
-  <button class="submit-btn" id="submitBtn" onclick="submitParcel()">
-    🚀 إنشاء الطرد في Yalidine
-  </button>
-
-  <!-- نتيجة -->
-  <div id="result-box"></div>
-
+  <button class="submit-btn" id="submitBtn" onclick="submitParcel()">🚀 إنشاء الطرد في Yalidine</button>
+  <div id="res"></div>
 </div>
 
 <script>
-let isStopdesk = false;
+const WILS = {{ wilayas | tojson }};
+let isOff = false;
 
-function setDelivery(type) {
-  isStopdesk = (type === 'office');
-  document.getElementById('f_is_stopdesk').value = isStopdesk;
-  const toggle = document.getElementById('deliveryToggle');
-  toggle.classList.toggle('is-office', isStopdesk);
-  document.getElementById('stopdesk-section').style.display = isStopdesk ? 'block' : 'none';
+function setDel(t){
+  isOff = t==='office';
+  document.getElementById('f_stopdesk').value = isOff;
+  document.getElementById('btn-home').className = 'dt-btn'+(isOff?'':' ah');
+  document.getElementById('btn-off').className  = 'dt-btn'+(isOff?' ao':'');
+  document.getElementById('stopdesk-sec').style.display = isOff?'block':'none';
+  const s = document.getElementById('f_wil');
+  s.innerHTML = '<option value="">-- اختر الولاية --</option>';
+  WILS.forEach(w=>{
+    const o=document.createElement('option');
+    o.value=w.name; o.dataset.id=w.id; o.textContent=w.name; s.appendChild(o);
+  });
+  document.getElementById('f_comm').innerHTML='<option value="">-- اختر الولاية أولاً --</option>';
 }
 
-async function loadCommunes(sel) {
-  const wilayaId = sel.value;
-  const communesSel = document.getElementById('f_commune');
-  communesSel.innerHTML = '<option>جاري التحميل...</option>';
-  
-  try {
-    const res = await fetch(`/parcels/communes?wilaya_id=${wilayaId}`);
-    const data = await res.json();
-    communesSel.innerHTML = '<option value="">-- اختر البلدية --</option>';
-    data.forEach(c => {
-      const opt = document.createElement('option');
-      const cname = c.name || c.commune_name || c.commune || String(c.id || '');
-      opt.value = cname;
-      opt.textContent = cname;
-      communesSel.appendChild(opt);
+async function loadComm(sel){
+  const wid = sel.options[sel.selectedIndex]?.dataset?.id;
+  const cs  = document.getElementById('f_comm');
+  if(!wid){cs.innerHTML='<option value="">-- اختر الولاية أولاً --</option>';return;}
+  cs.innerHTML='<option>جاري التحميل...</option>';
+  try{
+    const r = await fetch(`/parcels/communes?wilaya_id=${wid}`);
+    const d = await r.json();
+    cs.innerHTML='<option value="">-- اختر البلدية --</option>';
+    const list = isOff ? d.filter(c=>c.has_stop_desk||c.has_stopdesk) : d;
+    (list.length?list:d).forEach(c=>{
+      const n=c.name||c.commune_name||'';
+      const o=document.createElement('option');
+      o.value=n;o.textContent=n;cs.appendChild(o);
     });
-  } catch(e) {
-    communesSel.innerHTML = '<option value="">-- خطأ في تحميل البلديات --</option>';
-  }
+  }catch{cs.innerHTML='<option value="">-- خطأ --</option>';}
 }
 
-function showResult(msg, ok) {
-  const box = document.getElementById('result-box');
-  box.style.display = 'block';
-  box.className = 'result-box ' + (ok ? 'res-ok' : 'res-err');
-  box.innerHTML = msg;
-  box.scrollIntoView({ behavior: 'smooth' });
+function toggleSec(id,show){document.getElementById(id).style.display=show?'block':'none';}
+
+function setHeavy(v){
+  document.getElementById('w-no').className  = v?'':'wa';
+  document.getElementById('w-yes').className = v?'wa':'';
+  document.getElementById('f_wgt').value     = v?6:0.5;
 }
 
-async function submitParcel() {
-  const btn = document.getElementById('submitBtn');
-  
-  // جمع البيانات
-  const firstname = document.getElementById('f_firstname').value.trim();
-  const familyname = document.getElementById('f_familyname').value.trim();
-  const contact_phone = document.getElementById('f_phone').value.trim();
-  const wilayaSel = document.getElementById('f_wilaya');
-  const to_wilaya_name = wilayaSel.options[wilayaSel.selectedIndex]?.dataset?.name || '';
-  const to_commune_name = document.getElementById('f_commune').value;
-  const product_list = document.getElementById('f_product_list').value.trim();
-  const price = document.getElementById('f_price').value;
+function showRes(msg,ok){
+  const b=document.getElementById('res');
+  b.style.display='block'; b.className=ok?'rok':'rerr'; b.innerHTML=msg;
+  b.scrollIntoView({behavior:'smooth'});
+}
 
-  // Validation
-  if (!firstname) return showResult('❌ أدخل الاسم الأول', false);
-  if (!familyname) return showResult('❌ أدخل اللقب', false);
-  if (!contact_phone || contact_phone.length < 9) return showResult('❌ رقم الهاتف غير صالح', false);
-  if (!to_wilaya_name) return showResult('❌ اختر الولاية', false);
-  if (!to_commune_name) return showResult('❌ اختر البلدية', false);
-  if (!product_list) return showResult('❌ أدخل وصف المنتج', false);
-  if (!price || parseFloat(price) < 0) return showResult('❌ أدخل السعر', false);
+async function submitParcel(){
+  const btn=document.getElementById('submitBtn');
+  const first=document.getElementById('f_first').value.trim();
+  const fam  =document.getElementById('f_fam').value.trim();
+  const phone=document.getElementById('f_phone').value.trim();
+  const fwil =document.getElementById('f_from_wil').value;
+  const twil =document.getElementById('f_wil').value;
+  const comm =document.getElementById('f_comm').value;
+  const prod =document.getElementById('f_prod').value.trim();
+  const price=document.getElementById('f_price').value;
 
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الإرسال لـ Yalidine...';
+  if(!first)       return showRes('❌ أدخل اسم المستلم',false);
+  if(!fam)         return showRes('❌ أدخل لقب المستلم',false);
+  if(!phone||phone.length<9) return showRes('❌ رقم الهاتف غير صالح',false);
+  if(!fwil)        return showRes('❌ اختر ولاية الإرسال',false);
+  if(!twil)        return showRes('❌ اختر ولاية الوجهة',false);
+  if(!comm)        return showRes('❌ اختر البلدية',false);
+  if(!prod)        return showRes('❌ أدخل وصف المنتج',false);
+  if(!price)       return showRes('❌ أدخل السعر',false);
 
-  const payload = {
-    firstname, familyname,
-    contact_phone,
-    address: document.getElementById('f_address').value.trim(),
-    to_wilaya_name,
-    to_commune_name,
-    product_list,
-    price: parseFloat(price),
-    is_stopdesk: isStopdesk,
-    stopdesk_id: isStopdesk ? (document.getElementById('f_stopdesk_id').value || null) : null,
-    freeshipping: document.getElementById('f_freeshipping').checked,
-    order_id: document.getElementById('f_order_id').value.trim(),
-    height: parseFloat(document.getElementById('f_height').value) || 10,
-    width:  parseFloat(document.getElementById('f_width').value)  || 15,
-    length: parseFloat(document.getElementById('f_length').value) || 20,
-    weight: parseFloat(document.getElementById('f_weight').value) || 0.5,
+  btn.disabled=true; btn.textContent='⏳ جاري الإرسال لـ Yalidine...';
+
+  const insYes = document.getElementById('ins_yes').checked;
+  const exch   = document.getElementById('f_exch').checked;
+
+  const payload={
+    firstname:first, familyname:fam,
+    contact_phone:phone,
+    from_wilaya_name:fwil,
+    to_wilaya_name:twil,
+    to_commune_name:comm,
+    address:document.getElementById('f_addr').value.trim(),
+    product_list:prod,
+    price:parseFloat(price),
+    order_id:document.getElementById('f_oid').value.trim(),
+    is_stopdesk:isOff,
+    stopdesk_id:isOff?(document.getElementById('f_sdid').value||null):null,
+    freeshipping:false,
+    has_exchange:exch,
+    product_to_collect:exch?document.getElementById('f_exchprod').value.trim():'',
+    do_insurance:insYes,
+    declared_value:insYes?(parseFloat(document.getElementById('f_decval').value)||0):0,
+    height:parseFloat(document.getElementById('f_hei').value)||10,
+    width :parseFloat(document.getElementById('f_wid').value)||15,
+    length:parseFloat(document.getElementById('f_len').value)||20,
+    weight:parseFloat(document.getElementById('f_wgt').value)||0.5,
   };
 
-  try {
-    const res = await fetch('/parcels/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-
-    if (data.ok) {
-      showResult(
-        `✅ تم إنشاء الطرد بنجاح!<br>
-         🔢 رقم التتبع: <strong style="font-size:16px;">${data.tracking}</strong><br>
-         📋 رقم الطلب: ${data.order_id}<br><br>
-         <a href="/parcels" style="color:#4CAF50;text-decoration:none;">← عرض كل الطرود</a>`,
-        true
-      );
-      btn.textContent = '✅ تم الإنشاء!';
-    } else {
-      showResult(data.msg || '❌ خطأ غير معروف', false);
-      btn.disabled = false;
-      btn.textContent = '🚀 إنشاء الطرد في Yalidine';
+  try{
+    const r=await fetch('/parcels/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(d.ok){
+      showRes(`✅ تم إنشاء الطرد بنجاح!<br>🔢 رقم التتبع: <strong style="font-size:17px">${d.tracking}</strong><br>📋 رقم الطلب: ${d.order_id}<br><br><a href="/parcels" style="color:#4CAF50;text-decoration:none">← عرض الطرود</a>`,true);
+      btn.textContent='✅ تم!';
+    }else{
+      showRes(d.msg||'❌ خطأ',false);
+      btn.disabled=false; btn.textContent='🚀 إنشاء الطرد في Yalidine';
     }
-  } catch(e) {
-    showResult('❌ خطأ في الاتصال: ' + e, false);
-    btn.disabled = false;
-    btn.textContent = '🚀 إنشاء الطرد في Yalidine';
+  }catch{
+    showRes('❌ خطأ في الاتصال',false);
+    btn.disabled=false; btn.textContent='🚀 إنشاء الطرد في Yalidine';
   }
 }
 </script>
-
 {% endblock %}
