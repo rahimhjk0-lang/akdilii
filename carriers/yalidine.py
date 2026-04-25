@@ -187,18 +187,22 @@ class YalidineCarrier(BaseCarrier):
             resp = requests.post(
                 f"{self.BASE_URL}/parcels/",
                 headers=self._headers(),
-                json=payload,
+                json=[payload],
                 timeout=20
             )
             if resp.status_code in [200, 201]:
                 data = resp.json()
-                # استخرج رقم التتبع
+                # Yalidine يرجع list — نأخذ أول عنصر
+                if isinstance(data, list) and len(data) > 0:
+                    item = data[0]
+                else:
+                    item = data if isinstance(data, dict) else {}
                 tracking = (
-                    data.get("tracking") or 
-                    data.get("id") or 
-                    data.get("tracking_number") or
-                    (data.get("data", {}) or {}).get("tracking", "") or
-                    str(data.get("parcel_id", ""))
+                    item.get("tracking") or
+                    item.get("id") or
+                    item.get("tracking_number") or
+                    (item.get("data", {}) or {}).get("tracking", "") or
+                    str(item.get("parcel_id", ""))
                 )
                 return {"success": True, "tracking": tracking, "raw": data}
             else:
