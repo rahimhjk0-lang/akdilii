@@ -155,8 +155,12 @@ class YalidineCarrier(BaseCarrier):
                             stopdesk_id, freeshipping, order_id
         """
         try:
+            import time as _time, random as _random
+            _oid = str(parcel_data.get("order_id") or "").strip()
+            if not _oid:
+                _oid = f"AKD-{int(_time.time())}-{_random.randint(1000,9999)}"
             payload = {
-                "order_id":        parcel_data.get("order_id", ""),
+                "order_id":        _oid,
                 "firstname":       parcel_data.get("firstname", ""),
                 "familyname":      parcel_data.get("familyname", ""),
                 "contact_phone":   parcel_data.get("contact_phone", ""),
