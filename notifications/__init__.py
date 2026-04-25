@@ -1,19 +1,23 @@
+import os
 import requests
-from config import GREEN_API_INSTANCE, GREEN_API_TOKEN, STATUS_MESSAGES, WHATSAPP_STATUSES, SMS_STATUSES
+from config import STATUS_MESSAGES, WHATSAPP_STATUSES, SMS_STATUSES
 
 # ==========================================
 # إرسال واتساب عبر Green API
 # ==========================================
 def send_whatsapp(phone: str, message: str) -> bool:
     try:
-        if not GREEN_API_INSTANCE or not GREEN_API_TOKEN:
+        instance = os.getenv("GREEN_API_INSTANCE", "").strip()
+        token    = os.getenv("GREEN_API_TOKEN", "").strip()
+
+        if not instance or not token:
             print("⚠️ Green API غير مضبوط")
             return False
 
-        instance = GREEN_API_INSTANCE.strip()
-        token    = GREEN_API_TOKEN.strip()
-        phone    = clean_phone(phone)
-        chat_id  = phone.replace("+", "") + "@c.us"
+        phone   = clean_phone(phone)
+        chat_id = phone.replace("+", "") + "@c.us"
+
+        print(f"🔵 يحاول إرسال واتساب → chatId={chat_id}")
 
         resp = requests.post(
             f"https://api.greenapi.com/waInstance{instance}/sendMessage/{token}",
