@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}إنشاء طرد جديد{% endblock %}
+{% block content %}
+
+<style>
+.form-section { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:22px; margin-bottom:18px; }
+.form-section h6 { color:#4CAF50; font-weight:800; margin-bottom:16px; font-size:14px; }
+.form-label-s { font-size:12px; color:rgba(255,255,255,0.5); display:block; margin-bottom:4px; }
+.form-input { width:100%; padding:10px 13px; border-radius:9px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); color:#fff; font-family:'Cairo',sans-serif; font-size:13px; margin-bottom:12px; box-sizing:border-box; transition:border-color .2s; }
+.form-input:focus { border-color:#4CAF50; outline:none; background:rgba(255,255,255,0.09); }
+.form-input option { background:#1a1a2e; color:#fff; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.toggle-btn { display:flex; border-radius:9px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); margin-bottom:12px; }
+.toggle-btn button { flex:1; padding:9px; border:none; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; transition:all .2s; }
+.toggle-btn .t-home { background:rgba(76,175,80,0.15); color:#4CAF50; }
+.toggle-btn .t-office { background:transparent; color:rgba(255,255,255,0.4); }
+.toggle-btn.is-office .t-home { background:transparent; color:rgba(255,255,255,0.4); }
+.toggle-btn.is-office .t-office { background:rgba(255,165,0,0.15); color:orange; }
+.submit-btn { width:100%; padding:13px; border-radius:10px; background:linear-gradient(135deg,#4CAF50,#2196F3); border:none; color:#fff; font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; cursor:pointer; transition:opacity .2s; }
+.submit-btn:hover { opacity:.9; }
+.submit-btn:disabled { opacity:.5; cursor:not-allowed; }
+#stopdesk-section { display:none; }
+#result-box { display:none; border-radius:12px; padding:16px; margin-top:14px; text-align:center; font-weight:700; }
+.res-ok { background:rgba(76,175,80,0.15); border:1px solid #4CAF50; color:#4CAF50; }
+.res-err { background:rgba(255,70,70,0.15); border:1px solid #ff4646; color:#ff7070; }
+</style>
+
+<div class="topbar" style="margin-bottom:20px;">
+  <div>
+    <a href="/parcels" style="color:rgba(255,255,255,0.4);text-decoration:none;font-size:13px;">◀ الطرود</a>
+    <h5 class="mb-0 fw-700" style="margin-top:4px;">📦 إنشاء طرد جديد</h5>
+  </div>
+</div>
+
+<div style="max-width:640px;margin:0 auto;">
+
+  <!-- بيانات الزبون -->
+  <div class="form-section">
+    <h6>👤 بيانات الزبون</h6>
+    <div class="form-row">
+      <div>
+        <label class="form-label-s">الاسم الأول *</label>
+        <input id="f_firstname" class="form-input" type="text" placeholder="مثال: أحمد">
+      </div>
+      <div>
+        <label class="form-label-s">اللقب *</label>
+        <input id="f_familyname" class="form-input" type="text" placeholder="مثال: بن علي">
+      </div>
+    </div>
+    <label class="form-label-s">رقم الهاتف *</label>
+    <input id="f_phone" class="form-input" type="tel" placeholder="0XXXXXXXXX" maxlength="10">
+    <label class="form-label-s">العنوان (اختياري)</label>
+    <input id="f_address" class="form-input" type="text" placeholder="الشارع، الحي...">
+  </div>
+
+  <!-- الوجهة -->
+  <div class="form-section">
+    <h6>📍 الوجهة</h6>
+    <div class="form-row">
+      <div>
+        <label class="form-label-s">الولاية *</label>
+        <select id="f_wilaya" class="form-input" onchange="loadCommunes(this)">
+          <option value="">-- اختر الولاية --</option>
+          {% for w in wilayas %}
+          <option value="{{ w.id }}" data-name="{{ w.name }}">{{ w.id }} - {{ w.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label-s">البلدية *</label>
+        <select id="f_commune" class="form-input">
+          <option value="">-- اختر الولاية أولاً --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- نوع التسليم -->
+    <label class="form-label-s">نوع التسليم *</label>
+    <div class="toggle-btn" id="deliveryToggle">
+      <button class="t-home" onclick="setDelivery('home')">🏠 تسليم للمنزل</button>
+      <button class="t-office" onclick="setDelivery('office')">🏢 سحب من المكتب</button>
+    </div>
+    <input type="hidden" id="f_is_stopdesk" value="false">
+
+    <!-- معرف المكتب (يظهر فقط عند اختيار مكتب) -->
+    <div id="stopdesk-section">
+      <label class="form-label-s">رقم مكتب الاستلام (Stopdesk ID)</label>
+      <input id="f_stopdesk_id" class="form-input" type="number" placeholder="رقم المكتب من Yalidine">
+    </div>
+  </div>
+
+  <!-- بيانات المنتج -->
+  <div class="form-section">
+    <h6>📦 بيانات الشحنة</h6>
+    <label class="form-label-s">وصف المنتجات *</label>
+    <input id="f_product_list" class="form-input" type="text" placeholder="مثال: حذاء رياضي أبيض مقاس 42">
+    <div class="form-row">
+      <div>
+        <label class="form-label-s">سعر الاسترداد (دج) *</label>
+        <input id="f_price" class="form-input" type="number" placeholder="مثال: 3500" min="0">
+      </div>
+      <div>
+        <label class="form-label-s">رقم الطلب (اختياري)</label>
+        <input id="f_order_id" class="form-input" type="text" placeholder="يُولَّد تلقائياً إذا تُرك فارغاً">
+      </div>
+    </div>
+    <div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:rgba(255,255,255,0.6);">
+        <input type="checkbox" id="f_freeshipping" style="width:16px;height:16px;accent-color:#4CAF50;">
+        شحن مجاني (التاجر يدفع أجرة التوصيل)
+      </label>
+    </div>
+  </div>
+
+  <!-- أبعاد الطرد (اختياري) -->
+  <div class="form-section">
+    <h6>📐 أبعاد الطرد <span style="color:rgba(255,255,255,0.3);font-weight:400;">(اختياري)</span></h6>
+    <div class="form-row-3">
+      <div>
+        <label class="form-label-s">الطول (سم)</label>
+        <input id="f_length" class="form-input" type="number" placeholder="20" value="20" min="1">
+      </div>
+      <div>
+        <label class="form-label-s">العرض (سم)</label>
+        <input id="f_width" class="form-input" type="number" placeholder="15" value="15" min="1">
+      </div>
+      <div>
+        <label class="form-label-s">الارتفاع (سم)</label>
+        <input id="f_height" class="form-input" type="number" placeholder="10" value="10" min="1">
+      </div>
+    </div>
+    <label class="form-label-s">الوزن (كغ)</label>
+    <input id="f_weight" class="form-input" type="number" placeholder="0.5" value="0.5" step="0.1" min="0.1" style="max-width:200px;">
+  </div>
+
+  <!-- زر الإرسال -->
+  <button class="submit-btn" id="submitBtn" onclick="submitParcel()">
+    🚀 إنشاء الطرد في Yalidine
+  </button>
+
+  <!-- نتيجة -->
+  <div id="result-box"></div>
+
+</div>
+
+<script>
+let isStopdesk = false;
+
+function setDelivery(type) {
+  isStopdesk = (type === 'office');
+  document.getElementById('f_is_stopdesk').value = isStopdesk;
+  const toggle = document.getElementById('deliveryToggle');
+  toggle.classList.toggle('is-office', isStopdesk);
+  document.getElementById('stopdesk-section').style.display = isStopdesk ? 'block' : 'none';
+}
+
+async function loadCommunes(sel) {
+  const wilayaId = sel.value;
+  const communesSel = document.getElementById('f_commune');
+  communesSel.innerHTML = '<option>جاري التحميل...</option>';
+  
+  try {
+    const res = await fetch(`/parcels/communes?wilaya_id=${wilayaId}`);
+    const data = await res.json();
+    communesSel.innerHTML = '<option value="">-- اختر البلدية --</option>';
+    data.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name || c.commune_name || c.commune || '';
+      opt.textContent = c.name || c.commune_name || c.commune || '';
+      communesSel.appendChild(opt);
+    });
+  } catch(e) {
+    communesSel.innerHTML = '<option value="">-- خطأ في تحميل البلديات --</option>';
+  }
+}
+
+function showResult(msg, ok) {
+  const box = document.getElementById('result-box');
+  box.style.display = 'block';
+  box.className = 'result-box ' + (ok ? 'res-ok' : 'res-err');
+  box.innerHTML = msg;
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function submitParcel() {
+  const btn = document.getElementById('submitBtn');
+  
+  // جمع البيانات
+  const firstname = document.getElementById('f_firstname').value.trim();
+  const familyname = document.getElementById('f_familyname').value.trim();
+  const contact_phone = document.getElementById('f_phone').value.trim();
+  const wilayaSel = document.getElementById('f_wilaya');
+  const to_wilaya_name = wilayaSel.options[wilayaSel.selectedIndex]?.dataset?.name || '';
+  const to_commune_name = document.getElementById('f_commune').value;
+  const product_list = document.getElementById('f_product_list').value.trim();
+  const price = document.getElementById('f_price').value;
+
+  // Validation
+  if (!firstname) return showResult('❌ أدخل الاسم الأول', false);
+  if (!familyname) return showResult('❌ أدخل اللقب', false);
+  if (!contact_phone || contact_phone.length < 9) return showResult('❌ رقم الهاتف غير صالح', false);
+  if (!to_wilaya_name) return showResult('❌ اختر الولاية', false);
+  if (!to_commune_name) return showResult('❌ اختر البلدية', false);
+  if (!product_list) return showResult('❌ أدخل وصف المنتج', false);
+  if (!price || parseFloat(price) < 0) return showResult('❌ أدخل السعر', false);
+
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال لـ Yalidine...';
+
+  const payload = {
+    firstname, familyname,
+    contact_phone,
+    address: document.getElementById('f_address').value.trim(),
+    to_wilaya_name,
+    to_commune_name,
+    product_list,
+    price: parseFloat(price),
+    is_stopdesk: isStopdesk,
+    stopdesk_id: isStopdesk ? (document.getElementById('f_stopdesk_id').value || null) : null,
+    freeshipping: document.getElementById('f_freeshipping').checked,
+    order_id: document.getElementById('f_order_id').value.trim(),
+    height: parseFloat(document.getElementById('f_height').value) || 10,
+    width:  parseFloat(document.getElementById('f_width').value)  || 15,
+    length: parseFloat(document.getElementById('f_length').value) || 20,
+    weight: parseFloat(document.getElementById('f_weight').value) || 0.5,
+  };
+
+  try {
+    const res = await fetch('/parcels/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      showResult(
+        `✅ تم إنشاء الطرد بنجاح!<br>
+         🔢 رقم التتبع: <strong style="font-size:16px;">${data.tracking}</strong><br>
+         📋 رقم الطلب: ${data.order_id}<br><br>
+         <a href="/parcels" style="color:#4CAF50;text-decoration:none;">← عرض كل الطرود</a>`,
+        true
+      );
+      btn.textContent = '✅ تم الإنشاء!';
+    } else {
+      showResult(data.msg || '❌ خطأ غير معروف', false);
+      btn.disabled = false;
+      btn.textContent = '🚀 إنشاء الطرد في Yalidine';
+    }
+  } catch(e) {
+    showResult('❌ خطأ في الاتصال: ' + e, false);
+    btn.disabled = false;
+    btn.textContent = '🚀 إنشاء الطرد في Yalidine';
+  }
+}
+</script>
+
+{% endblock %}

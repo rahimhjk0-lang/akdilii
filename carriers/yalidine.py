@@ -106,3 +106,98 @@ class YalidineCarrier(BaseCarrier):
             "returned":              "returned",
         }
         return mapping.get(raw_status, "in_transit")
+
+    def get_wilayas(self) -> list:
+        """جلب قائمة الولايات من Yalidine"""
+        try:
+            resp = requests.get(
+                f"{self.BASE_URL}/wilayas/",
+                headers=self._headers(),
+                timeout=15
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                # يرجع list أو dict فيه data
+                if isinstance(data, list):
+                    return data
+                return data.get("data", [])
+            return []
+        except Exception:
+            return []
+
+    def get_communes(self, wilaya_id: int = None) -> list:
+        """جلب قائمة البلديات"""
+        try:
+            params = {}
+            if wilaya_id:
+                params["wilaya_id"] = wilaya_id
+            resp = requests.get(
+                f"{self.BASE_URL}/communes/",
+                headers=self._headers(),
+                params=params,
+                timeout=15
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list):
+                    return data
+                return data.get("data", [])
+            return []
+        except Exception:
+            return []
+
+    def create_parcel(self, parcel_data: dict) -> dict:
+        """
+        إنشاء طرد جديد في Yalidine
+        parcel_data يحتوي: firstname, familyname, contact_phone, 
+                            to_wilaya_name, to_commune_name, 
+                            product_list, price, is_stopdesk, 
+                            stopdesk_id, freeshipping, order_id
+        """
+        try:
+            payload = {
+                "order_id":        parcel_data.get("order_id", ""),
+                "firstname":       parcel_data.get("firstname", ""),
+                "familyname":      parcel_data.get("familyname", ""),
+                "contact_phone":   parcel_data.get("contact_phone", ""),
+                "address":         parcel_data.get("address", ""),
+                "to_commune_name": parcel_data.get("to_commune_name", ""),
+                "to_wilaya_name":  parcel_data.get("to_wilaya_name", ""),
+                "product_list":    parcel_data.get("product_list", ""),
+                "price":           float(parcel_data.get("price", 0)),
+                "do_insurance":    False,
+                "declared_value":  0,
+                "height":          float(parcel_data.get("height", 1)),
+                "width":           float(parcel_data.get("width", 1)),
+                "length":          float(parcel_data.get("length", 1)),
+                "weight":          float(parcel_data.get("weight", 0.5)),
+                "freeshipping":    bool(parcel_data.get("freeshipping", False)),
+                "is_stopdesk":     bool(parcel_data.get("is_stopdesk", False)),
+                "stopdesk_id":     int(parcel_data.get("stopdesk_id", 0)) if parcel_data.get("stopdesk_id") else None,
+                "has_exchange":    False,
+            }
+            # إزالة stopdesk_id إذا كان None
+            if payload["stopdesk_id"] is None:
+                del payload["stopdesk_id"]
+
+            resp = requests.post(
+                f"{self.BASE_URL}/parcels/",
+                headers=self._headers(),
+                json=payload,
+                timeout=20
+            )
+            if resp.status_code in [200, 201]:
+                data = resp.json()
+                # استخرج رقم التتبع
+                tracking = (
+                    data.get("tracking") or 
+                    data.get("id") or 
+                    data.get("tracking_number") or
+                    (data.get("data", {}) or {}).get("tracking", "") or
+                    str(data.get("parcel_id", ""))
+                )
+                return {"success": True, "tracking": tracking, "raw": data}
+            else:
+                return {"success": False, "error": resp.text, "status_code": resp.status_code}
+        except Exception as e:
+            return {"success": False, "error": str(e)}

@@ -212,6 +212,162 @@ async def plans_page(
 # ==========================================
 # تفاصيل طرد واحد
 # ==========================================
+# ==========================================
+# إنشاء طرد جديد في Yalidine
+# ==========================================
+@router.get("/parcels/create", response_class=HTMLResponse)
+async def create_parcel_page(
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    # جلب شركة Yalidine المربوطة
+    yalidine_carrier = db.query(Carrier).filter(
+        Carrier.merchant_id == merchant.id,
+        Carrier.carrier_code == "yalidine",
+        Carrier.is_connected == True
+    ).first()
+
+    if not yalidine_carrier:
+        return RedirectResponse("/carriers?msg=connect_yalidine", status_code=302)
+
+    # جلب الولايات من Yalidine
+    from carriers.yalidine import YalidineCarrier
+    yc = YalidineCarrier(
+        api_key=yalidine_carrier.api_key or "",
+        api_id=getattr(yalidine_carrier, "api_id", "") or ""
+    )
+    wilayas = yc.get_wilayas()
+
+    return templates.TemplateResponse("create_parcel.html", {
+        "request":  request,
+        "merchant": merchant,
+        "wilayas":  wilayas,
+    })
+
+
+@router.get("/parcels/communes")
+async def get_communes_api(
+    wilaya_id: int,
+    db:        Session  = Depends(get_db),
+    merchant:  Merchant = Depends(get_current_merchant)
+):
+    """جلب بلديات ولاية معينة (AJAX)"""
+    yalidine_carrier = db.query(Carrier).filter(
+        Carrier.merchant_id == merchant.id,
+        Carrier.carrier_code == "yalidine",
+        Carrier.is_connected == True
+    ).first()
+    if not yalidine_carrier:
+        return JSONResponse([])
+
+    from carriers.yalidine import YalidineCarrier
+    yc = YalidineCarrier(
+        api_key=yalidine_carrier.api_key or "",
+        api_id=getattr(yalidine_carrier, "api_id", "") or ""
+    )
+    communes = yc.get_communes(wilaya_id=wilaya_id)
+    return JSONResponse(communes)
+
+
+@router.post("/parcels/create")
+async def create_parcel_submit(
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "msg": "بيانات غير صالحة"})
+
+    # تحقق من الحقول الإلزامية
+    required = ["firstname", "familyname", "contact_phone", "to_wilaya_name", "product_list", "price"]
+    for f in required:
+        if not body.get(f):
+            return JSONResponse({"ok": False, "msg": f"الحقل '{f}' مطلوب"})
+
+    # تحقق من حد الباقة
+    from config import PLANS
+    plan_info = PLANS.get(merchant.plan, PLANS["free"])
+    current_count = db.query(Parcel).filter(Parcel.merchant_id == merchant.id).count()
+    if current_count >= plan_info["orders"]:
+        if merchant.plan == "free":
+            return JSONResponse({"ok": False, "msg": "⚠️ وصلت لحد الباقة المجانية (30 طرد)"})
+        return JSONResponse({"ok": False, "msg": f"⚠️ وصلت لحد باقتك ({plan_info['orders']} طرد)"})
+
+    # جلب Yalidine carrier
+    yalidine_carrier = db.query(Carrier).filter(
+        Carrier.merchant_id == merchant.id,
+        Carrier.carrier_code == "yalidine",
+        Carrier.is_connected == True
+    ).first()
+    if not yalidine_carrier:
+        return JSONResponse({"ok": False, "msg": "اربط حساب Yalidine أولاً"})
+
+    from carriers.yalidine import YalidineCarrier
+    import time, random
+    yc = YalidineCarrier(
+        api_key=yalidine_carrier.api_key or "",
+        api_id=getattr(yalidine_carrier, "api_id", "") or ""
+    )
+
+    # توليد order_id تلقائي إذا ما أعطاه
+    order_id = body.get("order_id") or f"AKD-{int(time.time())}-{random.randint(100,999)}"
+    body["order_id"] = order_id
+
+    # إرسال لـ Yalidine
+    result = yc.create_parcel(body)
+
+    if not result["success"]:
+        return JSONResponse({"ok": False, "msg": f"❌ Yalidine: {result.get('error', 'خطأ غير معروف')}"})
+
+    tracking = result.get("tracking", "")
+    if not tracking:
+        return JSONResponse({"ok": False, "msg": "❌ ما رجعلنا رقم التتبع من Yalidine"})
+
+    # حفظ الطرد في قاعدة البيانات مع رقم الهاتف الحقيقي
+    phone = body.get("contact_phone", "")
+    name = (body.get("firstname", "") + " " + body.get("familyname", "")).strip()
+    is_stopdesk = bool(body.get("is_stopdesk", False))
+
+    new_parcel = Parcel(
+        merchant_id     = merchant.id,
+        carrier_id      = yalidine_carrier.id,
+        tracking_number = str(tracking),
+        customer_name   = name,
+        customer_phone  = phone,
+        wilaya          = body.get("to_wilaya_name", ""),
+        delivery_type   = "office" if is_stopdesk else "home",
+        current_status  = "at_origin",
+        is_active       = True,
+    )
+    db.add(new_parcel)
+    db.commit()
+    db.refresh(new_parcel)
+
+    # إرسال واتساب فوري لتأكيد الطرد
+    try:
+        from notifications import notify_customer
+        notify_customer(
+            phone           = phone,
+            tracking_number = str(tracking),
+            status          = "at_origin",
+            delivery_type   = "office" if is_stopdesk else "home",
+            merchant_name   = merchant.name or ""
+        )
+    except Exception as notif_err:
+        print(f"⚠️ واتساب (غير حرج): {notif_err}")
+
+    return JSONResponse({
+        "ok": True, 
+        "msg": f"✅ تم إنشاء الطرد بنجاح!",
+        "tracking": tracking,
+        "order_id": order_id
+    })
+
+
+
 @router.get("/parcels/{parcel_id}", response_class=HTMLResponse)
 async def parcel_detail(
     request:   Request,
