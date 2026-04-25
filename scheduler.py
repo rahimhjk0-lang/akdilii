@@ -57,13 +57,14 @@ def check_all_parcels():
                 if not new_status:
                     continue
 
-                # تحقق: هل سبق وتبعثت رسالة لهذا الطرد؟
-                already_notified = db.query(Notification).filter(
-                    Notification.parcel_id == parcel.id
+                # تحقق: هل سبق وتبعثت رسالة لهذه الحالة بالتحديد؟
+                already_this_status = db.query(Notification).filter(
+                    Notification.parcel_id == parcel.id,
+                    Notification.message.contains(new_status)
                 ).first()
 
-                # بعث رسالة إذا: تغيرت الحالة أو طرد جديد لم يُشعَر به بعد
-                if new_status != parcel.current_status or not already_notified:
+                # بعث رسالة فقط إذا تغيرت الحالة ولم تُبعث رسالة لهذه الحالة بعد
+                if new_status != parcel.current_status and not already_this_status:
                     logger.info(f"📦 {parcel.tracking_number}: {parcel.current_status} → {new_status}")
 
                     # حفظ التحديث في قاعدة البيانات
@@ -83,6 +84,9 @@ def check_all_parcels():
                         delivery_type   = parcel.delivery_type,
                         merchant_name   = parcel.merchant.name if parcel.merchant else ""
                     )
+                    # delay بين الرسايل باش ما يتغلقش الواتساب
+                    import time as _t
+                    _t.sleep(3)
 
                     # حفظ سجل الإشعار
                     if notif_result.get("whatsapp_sent"):
