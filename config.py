@@ -25,25 +25,23 @@ CHARGILY_WEBHOOK_SECRET = os.getenv("CHARGILY_WEBHOOK_SECRET", "")
 APP_URL                 = os.getenv("APP_URL", "https://akdilii.onrender.com")
 
 # ---- Green API واتساب ----
-GREEN_API_INSTANCE = os.getenv("GREEN_API_INSTANCE", "").strip()
-GREEN_API_TOKEN    = os.getenv("GREEN_API_TOKEN", "").strip()
+GREEN_API_INSTANCE = os.getenv("GREEN_API_INSTANCE", "")
+GREEN_API_TOKEN    = os.getenv("GREEN_API_TOKEN", "")
 
 # ---- SMS ----
 SMS_API_KEY = os.getenv("SMS_API_KEY", "")
 SMS_SENDER  = os.getenv("SMS_SENDER", "Akdili")
 
 # ---- الجدولة ----
-TRACKING_INTERVAL_HOURS = 0  # غير مستعمل
 TRACKING_INTERVAL_MINUTES = 30  # كل 30 دقيقة
 
 # ---- الباقات ----
 PLANS = {
-    "free":       {"name": "مجاني",      "orders": 30,    "price": 0,     "price_dz": "مجاني"},
-    "starter":    {"name": "Starter",    "orders": 250,   "price": 2900,  "price_dz": "2,900 دج"},
-    "growth":     {"name": "Growth",     "orders": 500,   "price": 4900,  "price_dz": "4,900 دج"},
-    "pro":        {"name": "Pro",        "orders": 1000,  "price": 9900,  "price_dz": "9,900 دج"},
-    "business":   {"name": "Business",  "orders": 5000,  "price": 14900, "price_dz": "14,900 دج"},
-    "unlimited":  {"name": "غير محدود", "orders": 99999, "price": 17900, "price_dz": "17,900 دج"},
+    "starter":    {"name": "Starter",    "orders": 100,  "price": 2900,  "price_dz": "2,900 دج"},
+    "growth":     {"name": "Growth",     "orders": 200,  "price": 4900,  "price_dz": "4,900 دج"},
+    "pro":        {"name": "Pro",        "orders": 300,  "price": 6900,  "price_dz": "6,900 دج"},
+    "business":   {"name": "Business",   "orders": 500,  "price": 9900,  "price_dz": "9,900 دج"},
+    "enterprise": {"name": "Enterprise", "orders": 2000, "price": 14900, "price_dz": "14,900 دج"},
 }
 
 # ---- شركات التوصيل ----
