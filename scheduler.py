@@ -51,20 +51,17 @@ def check_all_parcels():
                 if not result:
                     continue
 
-                new_status = result.get("status", "")
+                new_status = result.get("status")   # None إذا حالة مجهولة أو فارغة
                 location   = result.get("location", "")
 
+                # ✅ شرط صارم: حالة صحيحة + تغيرت فعلاً
                 if not new_status:
+                    logger.info(f"⏭ {parcel.tracking_number}: لا حالة من API — نتجاهل")
                     continue
 
-                # تحقق: هل سبق وتبعثت رسالة لهذه الحالة بالتحديد؟
-                already_this_status = db.query(Notification).filter(
-                    Notification.parcel_id == parcel.id,
-                    Notification.message.contains(new_status)
-                ).first()
+                logger.info(f"[TRACKING] {parcel.tracking_number}: حالة API={repr(new_status)} | DB={repr(parcel.current_status)}")
 
-                # بعث رسالة فقط إذا تغيرت الحالة ولم تُبعث رسالة لهذه الحالة بعد
-                if new_status != parcel.current_status and not already_this_status:
+                if new_status != parcel.current_status:
                     logger.info(f"📦 {parcel.tracking_number}: {parcel.current_status} → {new_status}")
 
                     # حفظ التحديث في قاعدة البيانات
@@ -84,9 +81,6 @@ def check_all_parcels():
                         delivery_type   = parcel.delivery_type,
                         merchant_name   = parcel.merchant.name if parcel.merchant else ""
                     )
-                    # delay بين الرسايل باش ما يتغلقش الواتساب
-                    import time as _t
-                    _t.sleep(3)
 
                     # حفظ سجل الإشعار
                     if notif_result.get("whatsapp_sent"):
@@ -145,7 +139,7 @@ def start_scheduler():
         func    = check_all_parcels,
         trigger = IntervalTrigger(minutes=TRACKING_INTERVAL_MINUTES),
         id      = "track_parcels",
-        name    = "تتبع الطرود كل 5 ساعات",
+        name    = f"تتبع الطرود كل {TRACKING_INTERVAL_MINUTES} دقيقة",
         replace_existing = True
     )
     scheduler.start()
