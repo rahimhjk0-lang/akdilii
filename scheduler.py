@@ -1,5 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 from database import SessionLocal
 from models import Parcel, Carrier, TrackingEvent, Notification
 from carriers.all_carriers import get_carrier
@@ -135,6 +136,7 @@ def check_all_parcels():
 scheduler = BackgroundScheduler()
 
 def start_scheduler():
+    # ── Job 1: تتبع عادي كل 30 دقيقة ──
     scheduler.add_job(
         func    = check_all_parcels,
         trigger = IntervalTrigger(minutes=TRACKING_INTERVAL_MINUTES),
@@ -142,8 +144,29 @@ def start_scheduler():
         name    = f"تتبع الطرود كل {TRACKING_INTERVAL_MINUTES} دقيقة",
         replace_existing = True
     )
+
+    # ── Job 2: Daily Audit كل يوم 00:00 ──
+    scheduler.add_job(
+        func    = _run_daily_audit,
+        trigger = CronTrigger(hour=0, minute=0),
+        id      = "daily_audit",
+        name    = "Daily Batch Audit 00:00",
+        replace_existing = True
+    )
+
     scheduler.start()
-    logger.info(f"⏰ الجدولة شغالة — كل {TRACKING_INTERVAL_MINUTES} دقيقة")
+    logger.info(f"⏰ الجدولة شغالة — كل {TRACKING_INTERVAL_MINUTES} دقيقة + Daily Audit 00:00")
+
+def _run_daily_audit():
+    """يشغّل daily_batch_audit من services.magic_sync"""
+    try:
+        from services.magic_sync import daily_batch_audit
+        logger.info("🌙 Daily Audit — بدأ...")
+        result = daily_batch_audit()
+        logger.info(f"✅ Daily Audit اكتمل — {result}")
+    except Exception as e:
+        logger.error(f"❌ Daily Audit error: {e}")
+
 
 def stop_scheduler():
     if scheduler.running:
