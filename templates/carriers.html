@@ -4,25 +4,6 @@
 <div class="topbar">
     <h5 class="mb-0 fw-700">🚚 شركات التوصيل</h5>
     <small class="text-muted">اربط حسابك في شركة التوصيل</small>
-
-<button onclick="syncParcels()" style="background:#4CAF50;color:#fff;border:none;border-radius:10px;padding:8px 18px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;margin-right:8px;">
-    🔄 مزامنة الطرود
-</button>
-
-<script>
-async function syncParcels() {
-    var btn = event.target;
-    btn.textContent = '⏳ جاري المزامنة...';
-    btn.disabled = true;
-    var r = await fetch('/carriers/sync', {method:'POST'});
-    var d = await r.json();
-    alert(d.msg);
-    btn.textContent = '🔄 مزامنة الطرود';
-    btn.disabled = false;
-    if(d.ok) location.href='/parcels';
-}
-</script>
-
 </div>
 
 <div class="row g-4">
@@ -39,7 +20,22 @@ async function syncParcels() {
         </div>
 
         {% if code in connected and connected[code].is_connected %}
-            <p class="text-success small mb-3"><i class="fas fa-check-circle"></i> الحساب مربوط ويشتغل</p>
+            <p class="text-success small mb-2"><i class="fas fa-check-circle"></i> الحساب مربوط ويشتغل</p>
+            {% if code == 'yalidine' %}
+            <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.78rem;">
+                <strong>📡 رابط الإشعارات (Webhook):</strong><br>
+                <code style="word-break:break-all;font-size:0.72rem;">
+                    https://akdilii.onrender.com/webhook/yalidine/{{ merchant.id }}
+                </code><br>
+                <button class="btn btn-outline-secondary btn-sm mt-1 py-0"
+                    onclick="navigator.clipboard.writeText('https://akdilii.onrender.com/webhook/yalidine/{{ merchant.id }}');this.innerHTML='✅ تم النسخ'">
+                    📋 نسخ الرابط
+                </button>
+                <div class="text-muted mt-1" style="font-size:0.7rem;">
+                    أضفه في لوحة Yalidine: الإعدادات ← Webhook
+                </div>
+            </div>
+            {% endif %}
             <button class="btn btn-outline-danger btn-sm w-100" onclick="disconnectCarrier('{{ code }}')">
                 قطع الربط
             </button>
@@ -316,7 +312,23 @@ async function connectCarrier(e) {
 
     if (json.success) {
         bootstrap.Modal.getInstance(document.getElementById('carrierModal')).hide();
-        alert('✅ ' + json.message);
+        // إذا Yalidine → اعرض رابط الـ Webhook
+        if (data.get('carrier_code') === 'yalidine') {
+            const webhookUrl = `https://akdilii.onrender.com/webhook/yalidine/{{ merchant.id }}`;
+            const msg = `✅ تم ربط Yalidine!\n\n` +
+                `📦 جاري استيراد طرودك تلقائياً...\n\n` +
+                `─────────────────────────────\n` +
+                `📡 رابط الإشعارات الفوري (Webhook):\n\n` +
+                `${webhookUrl}\n\n` +
+                `📋 أضفه في لوحة Yalidine:\n` +
+                `الإعدادات ← Webhook ← الصق الرابط\n\n` +
+                `(مرة واحدة فقط — يخليك تستقبل تحديثات فورية)`;
+            // نسخ الرابط تلقائياً
+            navigator.clipboard.writeText(webhookUrl).catch(()=>{});
+            alert(msg);
+        } else {
+            alert('✅ ' + json.message);
+        }
         location.reload();
     } else {
         alert('❌ ' + json.error);
