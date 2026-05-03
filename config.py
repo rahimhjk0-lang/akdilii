@@ -37,11 +37,10 @@ TRACKING_INTERVAL_MINUTES = 30  # كل 30 دقيقة
 
 # ---- الباقات ----
 PLANS = {
-    "starter":    {"name": "Starter",    "orders": 500,      "price": 2900,  "price_dz": "2,900 دج"},
-    "growth":     {"name": "Growth",     "orders": 1500,     "price": 4900,  "price_dz": "4,900 دج"},
-    "pro":        {"name": "Pro",        "orders": 3000,     "price": 7900,  "price_dz": "7,900 دج"},
-    "business":   {"name": "Business",   "orders": -1,       "price": 9900,  "price_dz": "9,900 دج"},
-    "enterprise": {"name": "Enterprise", "orders": -1,       "price": 14900, "price_dz": "14,900 دج"},
+    "starter":  {"name": "Starter",  "orders": 500,  "price": 2900, "price_dz": "2,900 دج"},
+    "growth":   {"name": "Growth",   "orders": 1500, "price": 4900, "price_dz": "4,900 دج"},
+    "pro":      {"name": "Pro",      "orders": 3000, "price": 7900, "price_dz": "7,900 دج"},
+    "business": {"name": "Business", "orders": -1,   "price": 9900, "price_dz": "9,900 دج"},
 }
 
 # ---- شركات التوصيل ----
