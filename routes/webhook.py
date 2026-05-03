@@ -24,9 +24,10 @@ router = APIRouter(prefix="/webhook", tags=["webhook"])
 # ============================================================
 @router.get("/yalidine/{merchant_id}")
 async def yalidine_webhook_validate(merchant_id: int, request: Request):
-    """Validation endpoint — يرجع 200 فوراً بدون أي شرط"""
-    logger.info(f"[WEBHOOK] Yalidine validation ping — merchant={merchant_id}")
-    return JSONResponse({"status": "ok", "merchant": merchant_id}, status_code=200)
+    crc_token = request.query_params.get("crc_token")
+    if crc_token:
+        return JSONResponse({"crc_token": crc_token}, status_code=200)
+    return JSONResponse({"status": "ok"}, status_code=200)
 
 
 # ============================================================
