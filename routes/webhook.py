@@ -24,12 +24,41 @@ router = APIRouter(prefix="/webhook", tags=["webhook"])
 # ============================================================
 @router.get("/yalidine/{merchant_id}")
 async def yalidine_webhook_validate(merchant_id: int, request: Request):
-    from fastapi.responses import Response
     import json as _json
+    from fastapi.responses import Response
+
+    # ── DEBUG: اطبع كل شيء باش نشوف ما يبعثه Yalidine ──
+    print(f"[WEBHOOK-DEBUG] GET merchant={merchant_id}")
+    print(f"[WEBHOOK-DEBUG] Headers: {dict(request.headers)}")
+    print(f"[WEBHOOK-DEBUG] Query params: {dict(request.query_params)}")
+
+    # 1) ابحث في الـ URL params
     crc_token = request.query_params.get("crc_token", "").strip()
+
+    # 2) ابحث في الـ JSON body
+    if not crc_token:
+        try:
+            body = await request.json()
+            crc_token = str(body.get("crc_token", "")).strip()
+            print(f"[WEBHOOK-DEBUG] JSON body: {body}")
+        except Exception:
+            pass
+
+    # 3) ابحث في الـ Form data
+    if not crc_token:
+        try:
+            form = await request.form()
+            crc_token = str(form.get("crc_token", "")).strip()
+            print(f"[WEBHOOK-DEBUG] Form data: {dict(form)}")
+        except Exception:
+            pass
+
+    print(f"[WEBHOOK-DEBUG] crc_token found: {repr(crc_token)}")
+
     if crc_token:
         body = _json.dumps({"crc_token": crc_token}, separators=(",", ":"))
         return Response(content=body, status_code=200, media_type="application/json")
+
     return Response(content='{"status":"ok"}', status_code=200, media_type="application/json")
 
 
