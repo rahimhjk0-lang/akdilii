@@ -1,14 +1,13 @@
 """
-Magic Sync Service — اكدلي
-==========================
-- Initial Sync  : عند ربط API تجيب كل الطرود النشطة تلقائياً
-- Batch Audit   : كل يوم 00:00 تتحقق من كل الطرود بـ batching
-- Webhook Setup : تسجل Webhook URL تلقائياً في حساب Yalidine
+Magic Sync Service — Self-Aware Rate Limiter
+=============================================
+- Initial Sync  : يجيب كل الطرود النشطة صفحة بصفحة (sleep 1.3s بين كل صفحة)
+- Daily Audit   : Batch 10 tracking/request مع header-aware throttle
+- Webhook Setup : يسجل Webhook URL تلقائياً في حساب Yalidine
 """
 
 import time
 import logging
-from typing import Optional
 from database import SessionLocal
 from models import Parcel, Carrier, TrackingEvent, Notification, Merchant
 from notifications import notify_customer
@@ -16,9 +15,11 @@ from config import APP_URL
 
 logger = logging.getLogger("akdili-magic-sync")
 
-# حالات Yalidine الفرنسية اللي تعتبر "مكتملة" — ما نستوردهاش
 TERMINAL_STATUSES_FR = {"Livré", "Retourné", "Retour reçu", "Echoué", "Tentative échouée"}
 TERMINAL_STATUSES_EN = {"delivered", "returned", "failed"}
+
+# sleep إجباري بين صفحات الـ Initial Sync (أقل من 50 req/min)
+INITIAL_SYNC_PAGE_SLEEP = 1.3
 
 
 # ============================================================
@@ -26,8 +27,9 @@ TERMINAL_STATUSES_EN = {"delivered", "returned", "failed"}
 # ============================================================
 def initial_sync(carrier_db, db=None) -> dict:
     """
-    تجيب كل الطرود النشطة من Yalidine وتضيفها في الـ DB.
-    تُستدعى مباشرة بعد حفظ API keys.
+    يجيب كل الطرود النشطة من Yalidine ويضيفها في الـ DB.
+    - sleep 1.3s بين كل صفحة (50 req/min safe)
+    - QuotaGuard في YalidineCarrier يتكفل بـ per-request throttle
     """
     close_db = False
     if db is None:
@@ -47,9 +49,13 @@ def initial_sync(carrier_db, db=None) -> dict:
 
         page = 1
         while True:
-            parcels_page, has_more = carrier_obj.get_active_parcels_page(page=page, page_size=50)
+            # QuotaGuard يتكفل بـ throttle داخل get_active_parcels_page
+            parcels_page, has_more = carrier_obj.get_active_parcels_page(
+                page=page, page_size=50
+            )
 
-            if not parcels_page:
+            if not parcels_page and not has_more:
+                logger.info(f"[SYNC] صفحة {page} فارغة أو آخر صفحة — نوقف")
                 break
 
             for p in parcels_page:
@@ -58,40 +64,46 @@ def initial_sync(carrier_db, db=None) -> dict:
                     if not tracking:
                         continue
 
-                    # تجاهل الطرود المكتملة
                     raw_status = p.get("last_status") or p.get("status") or ""
                     if raw_status in TERMINAL_STATUSES_FR:
                         stats["skipped"] += 1
                         continue
 
-                    # هل موجود مسبقاً؟
                     existing = db.query(Parcel).filter(
                         Parcel.tracking_number == str(tracking)
                     ).first()
-
                     if existing:
                         stats["skipped"] += 1
                         continue
 
-                    # Map الحالة
                     normalized = carrier_obj.normalize_status(raw_status) or "at_origin"
 
-                    # إنشاء الطرد
                     new_parcel = Parcel(
                         merchant_id     = carrier_db.merchant_id,
                         carrier_id      = carrier_db.id,
                         tracking_number = str(tracking),
-                        customer_name   = p.get("firstname", "") + " " + p.get("familyname", ""),
-                        customer_phone  = p.get("contact_phone", "") or p.get("phone", "") or "0000000000",
-                        wilaya          = p.get("to_wilaya_name", "") or p.get("last_update_wilaya", ""),
-                        delivery_type   = "home" if p.get("product_list") else "office",
+                        customer_name   = (
+                            (p.get("firstname", "") or "") + " " +
+                            (p.get("familyname", "") or "")
+                        ).strip() or "زبون",
+                        customer_phone  = (
+                            p.get("contact_phone") or
+                            p.get("phone") or
+                            "0000000000"
+                        ),
+                        wilaya          = (
+                            p.get("to_wilaya_name") or
+                            p.get("last_update_wilaya") or ""
+                        ),
+                        delivery_type   = (
+                            "home" if p.get("product_list") else "office"
+                        ),
                         current_status  = normalized,
                         is_active       = normalized not in TERMINAL_STATUSES_EN,
                     )
                     db.add(new_parcel)
                     db.flush()
 
-                    # أضف TrackingEvent أول مرة
                     event = TrackingEvent(
                         parcel_id   = new_parcel.id,
                         status      = normalized,
@@ -107,18 +119,37 @@ def initial_sync(carrier_db, db=None) -> dict:
                     continue
 
             db.commit()
-            logger.info(f"   📄 صفحة {page} — {len(parcels_page)} طرد")
+
+            quota_min = carrier_obj.quota.min_left
+            logger.info(
+                f"[SYNC] ✅ صفحة {page} | "
+                f"مستورد:{stats['imported']} skipped:{stats['skipped']} | "
+                f"quota_min={quota_min}"
+            )
 
             if not has_more:
                 break
-            page += 1
-            time.sleep(1.1)  # Rate limit: 1000ms
 
-        logger.info(f"✅ Magic Sync اكتمل — مستورد:{stats['imported']} | موجود:{stats['skipped']} | أخطاء:{stats['errors']}")
+            # ── sleep إجباري بين الصفحات (بالإضافة لـ QuotaGuard) ──
+            # إذا minute quota حرج → QuotaGuard نامت 65s داخل _safe_get
+            # هنا sleep إضافي ثابت 1.3s بين صفحات الـ pagination
+            if quota_min >= 5:
+                time.sleep(INITIAL_SYNC_PAGE_SLEEP)
+
+            page += 1
+
+        logger.info(
+            f"✅ Magic Sync اكتمل — "
+            f"مستورد:{stats['imported']} | موجود:{stats['skipped']} | أخطاء:{stats['errors']}"
+        )
 
     except Exception as e:
         logger.error(f"❌ Magic Sync فشل: {e}")
         stats["error_msg"] = str(e)
+        try:
+            db.rollback()
+        except Exception:
+            pass
     finally:
         if close_db:
             db.close()
@@ -129,24 +160,23 @@ def initial_sync(carrier_db, db=None) -> dict:
 # ============================================================
 # 2. DAILY BATCH AUDIT — كل يوم 00:00
 # ============================================================
-def daily_batch_audit():
+def daily_batch_audit() -> dict:
     """
-    يتحقق من كل الطرود النشطة عبر Batch API (10 tracking numbers لكل request).
-    يشتغل كـ cron job كل يوم 00:00.
+    يتحقق من كل الطرود النشطة عبر Batch API (10 tracking/request).
+    QuotaGuard في YalidineCarrier يتكفل بـ header-aware throttle.
     """
-    db = SessionLocal()
+    db      = SessionLocal()
     updated = 0
     errors  = 0
 
     try:
         logger.info("🌙 Daily Audit — بدأ...")
 
-        # جمع كل الشركات المربوطة
         carriers_db = db.query(Carrier).filter(Carrier.is_connected == True).all()
 
         for carrier_db in carriers_db:
             if carrier_db.carrier_code != "yalidine":
-                continue  # حالياً فقط Yalidine يدعم Batch
+                continue
 
             try:
                 from carriers.yalidine import YalidineCarrier
@@ -155,7 +185,6 @@ def daily_batch_audit():
                     api_id=getattr(carrier_db, "api_id", "") or ""
                 )
 
-                # جيب كل الطرود النشطة للتاجر
                 active_parcels = db.query(Parcel).filter(
                     Parcel.carrier_id == carrier_db.id,
                     Parcel.is_active  == True
@@ -167,11 +196,17 @@ def daily_batch_audit():
                 tracking_numbers = [p.tracking_number for p in active_parcels]
                 parcel_map       = {p.tracking_number: p for p in active_parcels}
 
-                # Batch: 10 tracking numbers لكل request
+                logger.info(
+                    f"[AUDIT] التاجر {carrier_db.merchant_id} — "
+                    f"{len(tracking_numbers)} طرد نشط"
+                )
+
+                # ── Batch 10 tracking numbers لكل request ──
                 BATCH_SIZE = 10
                 for i in range(0, len(tracking_numbers), BATCH_SIZE):
-                    batch = tracking_numbers[i:i + BATCH_SIZE]
+                    batch = tracking_numbers[i : i + BATCH_SIZE]
 
+                    # batch_track → _safe_get → QuotaGuard يتكفل بـ throttle
                     results = carrier_obj.batch_track(batch)
 
                     for tracking, result in results.items():
@@ -184,15 +219,24 @@ def daily_batch_audit():
                             continue
 
                         if new_status != parcel.current_status:
-                            # تحديث + إشعار
-                            _update_parcel_and_notify(db, parcel, new_status, result.get("location", ""), source="daily-audit")
+                            _update_parcel_and_notify(
+                                db, parcel,
+                                new_status,
+                                result.get("location", ""),
+                                source="daily-audit"
+                            )
                             updated += 1
 
                     db.commit()
-                    time.sleep(1.1)  # Rate limit
+
+                    logger.info(
+                        f"[AUDIT] Batch {i//BATCH_SIZE + 1} | "
+                        f"quota_min={carrier_obj.quota.min_left} | "
+                        f"quota_sec={carrier_obj.quota.sec_left}"
+                    )
 
             except Exception as e:
-                logger.error(f"❌ خطأ في audit للتاجر {carrier_db.merchant_id}: {e}")
+                logger.error(f"❌ خطأ في audit التاجر {carrier_db.merchant_id}: {e}")
                 db.rollback()
                 errors += 1
                 continue
@@ -208,55 +252,63 @@ def daily_batch_audit():
 
 
 # ============================================================
-# 3. WEBHOOK SETUP — تسجيل Webhook في Yalidine تلقائياً
+# 3. WEBHOOK SETUP — تسجيل Webhook في Yalidine
 # ============================================================
 def register_yalidine_webhook(carrier_db) -> dict:
     """
     يسجل Webhook URL في حساب Yalidine الخاص بالتاجر.
-    Webhook URL: {APP_URL}/webhook/yalidine/{merchant_id}
+    URL: {APP_URL}/webhook/yalidine/{merchant_id}
     """
+    import requests as req_lib
+
+    webhook_url = f"{APP_URL}/webhook/yalidine/{carrier_db.merchant_id}"
+    headers     = {
+        "X-API-ID":     getattr(carrier_db, "api_id", "") or "",
+        "X-API-TOKEN":  carrier_db.api_key or "",
+        "Content-Type": "application/json",
+    }
+
+    # محاولة 1: POST /webhooks/
     try:
-        import requests as req_lib
-        webhook_url = f"{APP_URL}/webhook/yalidine/{carrier_db.merchant_id}"
-
-        headers = {
-            "X-API-ID":     getattr(carrier_db, "api_id", "") or "",
-            "X-API-TOKEN":  carrier_db.api_key or "",
-            "Content-Type": "application/json"
-        }
-
-        # Yalidine API — تسجيل Webhook
         resp = req_lib.post(
             "https://api.yalidine.app/v1/webhooks/",
             headers=headers,
             json={
                 "url":    webhook_url,
-                "events": ["parcel.created", "parcel.updated", "parcel.status_changed"]
+                "events": ["parcel.created", "parcel.updated", "parcel.status_changed"],
             },
-            timeout=15
+            timeout=15,
         )
-
         if resp.status_code in [200, 201]:
-            logger.info(f"✅ Webhook مسجل لـ merchant {carrier_db.merchant_id}: {webhook_url}")
+            logger.info(f"✅ Webhook (POST) مسجل: {webhook_url}")
             return {"success": True, "webhook_url": webhook_url}
+    except Exception as e:
+        logger.warning(f"⚠️ Webhook POST error: {e}")
 
-        # بعض نسخ Yalidine API تستعمل endpoint مختلف
+    # محاولة 2: PUT /settings/webhook/
+    try:
         resp2 = req_lib.put(
             "https://api.yalidine.app/v1/settings/webhook/",
             headers=headers,
             json={"webhook_url": webhook_url},
-            timeout=15
+            timeout=15,
         )
         if resp2.status_code in [200, 201, 204]:
-            logger.info(f"✅ Webhook (PUT) مسجل لـ merchant {carrier_db.merchant_id}")
+            logger.info(f"✅ Webhook (PUT) مسجل: {webhook_url}")
             return {"success": True, "webhook_url": webhook_url}
 
-        logger.warning(f"⚠️ Webhook ما تسجلش — HTTP {resp.status_code} | {resp.text[:200]}")
-        return {"success": False, "error": f"HTTP {resp.status_code}", "webhook_url": webhook_url}
+        logger.warning(f"⚠️ Webhook PUT HTTP {resp2.status_code} | {resp2.text[:150]}")
 
     except Exception as e:
-        logger.error(f"❌ Webhook registration فشل: {e}")
-        return {"success": False, "error": str(e)}
+        logger.warning(f"⚠️ Webhook PUT error: {e}")
+
+    # الـ Webhook URL صحيح حتى لو التسجيل فشل —
+    # التاجر يقدر يضيفه يدوياً في لوحة Yalidine
+    return {
+        "success": False,
+        "webhook_url": webhook_url,
+        "note": "سجّل هذا الرابط يدوياً في لوحة Yalidine",
+    }
 
 
 # ============================================================
@@ -264,48 +316,57 @@ def register_yalidine_webhook(carrier_db) -> dict:
 # ============================================================
 def _update_parcel_and_notify(db, parcel, new_status: str, location: str, source: str = "webhook"):
     """
-    يحدث حالة الطرد في الـ DB ويبعث إشعار واتساب.
-    مشترك بين الـ webhook والـ audit.
+    يحدّث حالة الطرد ويبعث واتساب.
+    مشترك بين الـ webhook والـ daily audit.
     """
     try:
-        # حفظ event
         event = TrackingEvent(
             parcel_id   = parcel.id,
             status      = new_status,
             location    = location,
-            description = f"[{source}] {parcel.current_status} → {new_status}"
+            description = f"[{source}] {parcel.current_status} → {new_status}",
         )
         db.add(event)
 
-        # إشعار واتساب
-        merchant = db.query(Merchant).filter(Merchant.id == parcel.merchant_id).first()
+        merchant     = db.query(Merchant).filter(Merchant.id == parcel.merchant_id).first()
         notif_result = notify_customer(
             phone           = parcel.customer_phone,
             tracking_number = parcel.tracking_number,
             status          = new_status,
             delivery_type   = parcel.delivery_type or "home",
-            merchant_name   = merchant.name if merchant else ""
+            merchant_name   = merchant.name if merchant else "",
         )
 
         if notif_result.get("whatsapp_sent"):
-            notif = Notification(
+            db.add(Notification(
                 parcel_id = parcel.id,
                 channel   = "whatsapp",
                 phone     = parcel.customer_phone,
                 message   = f"[{source}] إشعار {new_status}",
-                status    = "sent"
-            )
-            db.add(notif)
+                status    = "sent",
+            ))
             event.whatsapp_sent = True
 
-        # تحديث الطرد
+        if notif_result.get("sms_sent"):
+            db.add(Notification(
+                parcel_id = parcel.id,
+                channel   = "sms",
+                phone     = parcel.customer_phone,
+                message   = f"[{source}] SMS {new_status}",
+                status    = "sent",
+            ))
+            event.sms_sent = True
+
         parcel.current_status = new_status
         parcel.wilaya         = location or parcel.wilaya
         if new_status in {"delivered", "returned"}:
             parcel.is_active = False
 
-        logger.info(f"📦 [{source}] {parcel.tracking_number}: → {new_status} | WA:{notif_result.get('whatsapp_sent')}")
+        logger.info(
+            f"📦 [{source}] {parcel.tracking_number}: → {new_status} | "
+            f"WA:{notif_result.get('whatsapp_sent')} | SMS:{notif_result.get('sms_sent')}"
+        )
 
     except Exception as e:
-        logger.error(f"❌ _update_parcel_and_notify فشل ({parcel.tracking_number}): {e}")
+        logger.error(f"❌ _update_parcel_and_notify ({parcel.tracking_number}): {e}")
         raise
