@@ -1,26 +1,56 @@
-import os
+import time
+import random
+import threading
+import queue
 import requests
-from config import STATUS_MESSAGES, WHATSAPP_STATUSES, SMS_STATUSES
+from config import GREEN_API_INSTANCE, GREEN_API_TOKEN, STATUS_MESSAGES, WHATSAPP_STATUSES, SMS_STATUSES
 
 # ==========================================
-# إرسال واتساب عبر Green API
+# WhatsApp Queue — إرسال بشري (3-5 ثواني بين الرسائل)
 # ==========================================
-def send_whatsapp(phone: str, message: str) -> bool:
+_wa_queue: queue.Queue = queue.Queue()
+_wa_worker_started     = False
+_wa_lock               = threading.Lock()
+
+def _wa_worker():
+    """Worker يشتغل في background — رسالة كل 3-5 ثواني"""
+    while True:
+        item = _wa_queue.get()
+        if item is None:
+            break
+        phone, message, result_holder = item
+        try:
+            ok = _send_whatsapp_direct(phone, message)
+            if result_holder is not None:
+                result_holder.append(ok)
+        except Exception:
+            if result_holder is not None:
+                result_holder.append(False)
+        finally:
+            _wa_queue.task_done()
+            # تأخير بشري 3-5 ثواني بين الرسائل
+            time.sleep(random.uniform(3.0, 5.0))
+
+def _ensure_worker():
+    global _wa_worker_started
+    with _wa_lock:
+        if not _wa_worker_started:
+            t = threading.Thread(target=_wa_worker, daemon=True)
+            t.start()
+            _wa_worker_started = True
+
+def _send_whatsapp_direct(phone: str, message: str) -> bool:
+    """إرسال مباشر عبر Green API — يُستدعى من الـ Queue Worker فقط"""
     try:
-        instance = os.getenv("GREEN_API_INSTANCE", "").strip()
-        token    = os.getenv("GREEN_API_TOKEN", "").strip()
-
-        if not instance or not token:
+        if not GREEN_API_INSTANCE or not GREEN_API_TOKEN:
             print("⚠️ Green API غير مضبوط")
             return False
 
         phone   = clean_phone(phone)
         chat_id = phone.replace("+", "") + "@c.us"
 
-        print(f"🔵 يحاول إرسال واتساب → chatId={chat_id}")
-
         resp = requests.post(
-            f"https://api.greenapi.com/waInstance{instance}/sendMessage/{token}",
+            f"https://api.greenapi.com/waInstance{GREEN_API_INSTANCE}/sendMessage/{GREEN_API_TOKEN}",
             json={"chatId": chat_id, "message": message},
             timeout=15
         )
@@ -28,12 +58,21 @@ def send_whatsapp(phone: str, message: str) -> bool:
         if data.get("idMessage"):
             print(f"✅ واتساب وصل → {phone}")
             return True
-        else:
-            print(f"❌ واتساب فشل → {phone} | {data}")
-            return False
+        print(f"❌ واتساب فشل → {phone} | {data}")
+        return False
     except Exception as e:
         print(f"❌ خطأ واتساب: {e}")
         return False
+
+
+def send_whatsapp(phone: str, message: str) -> bool:
+    """
+    يضيف الرسالة للـ Queue — يرجع True فوراً (fire-and-forget).
+    الـ Worker يبعث كل رسالة بعد 3-5 ثواني من السابقة.
+    """
+    _ensure_worker()
+    _wa_queue.put((phone, message, None))
+    return True  # نفترض النجاح — الـ scheduler يتتبع الـ DB
 
 
 # ==========================================
@@ -136,25 +175,22 @@ def notify_customer(
 # دوال مساعدة
 # ==========================================
 def clean_phone(phone: str) -> str:
-    """تنظيف رقم الهاتف — أرقام فقط"""
-    import re
-    phone = phone.strip()
-    # نحي كل شي ماعدا الأرقام
-    digits = re.sub(r'\D', '', phone)
+    """تنظيف رقم الهاتف"""
+    phone = phone.strip().replace(" ", "").replace("-", "")
 
-    # إذا يبدأ بـ 213 مباشرة
-    if digits.startswith("213"):
-        return "+" + digits
-
-    # إذا يبدأ بـ 0 → نحي الـ 0 ونضيف 213
-    if digits.startswith("0"):
-        digits = "213" + digits[1:]
+    # إذا يبدأ بـ 0 → حوله لـ 213
+    if phone.startswith("0"):
+        phone = "213" + phone[1:]
 
     # إذا ما فيهش كود الدولة
-    if not digits.startswith("213"):
-        digits = "213" + digits
+    if not phone.startswith("+") and not phone.startswith("213"):
+        phone = "213" + phone
 
-    return "+" + digits
+    # أضف + في البداية
+    if not phone.startswith("+"):
+        phone = "+" + phone
+
+    return phone
 
 
 def clean_for_sms(message: str) -> str:
