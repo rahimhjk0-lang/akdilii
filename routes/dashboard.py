@@ -320,3 +320,39 @@ def check_order_quota(merchant: Merchant, db: Session) -> dict:
         "limit":     limit,
         "remaining": max(0, limit - used),
     }
+
+
+# ==========================================
+# مزامنة يدوية — زر "مزامنة الآن"
+# ==========================================
+@router.post("/parcels/sync")
+async def sync_parcels_now(
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    """يشغّل Magic Sync الآن في background ويرجع فوراً"""
+    import threading
+    from services.magic_sync import initial_sync
+
+    carrier_db = db.query(Carrier).filter(
+        Carrier.merchant_id  == merchant.id,
+        Carrier.carrier_code == "yalidine",
+        Carrier.is_connected == True
+    ).first()
+
+    if not carrier_db:
+        return JSONResponse({"success": False, "error": "لا شركة Yalidine مربوطة"})
+
+    def _run():
+        from database import SessionLocal
+        _db = SessionLocal()
+        try:
+            stats = initial_sync(carrier_db, _db)
+            print(f"[SYNC] اكتمل: {stats}")
+        except Exception as e:
+            print(f"[SYNC] خطأ: {e}")
+        finally:
+            _db.close()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return JSONResponse({"success": True, "message": "🔄 المزامنة بدأت في الخلفية — حدّث الصفحة بعد دقيقة"})
