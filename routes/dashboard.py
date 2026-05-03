@@ -274,3 +274,49 @@ async def parcel_detail(
         "events":   events,
         "notifs":   notifs,
     })
+
+
+# ==========================================
+# حفظ رقم هاتف الزبون
+# ==========================================
+@router.post("/parcels/{parcel_id}/save-phone")
+async def save_phone(
+    parcel_id: int,
+    phone:     str     = Form(...),
+    db:        Session  = Depends(get_db),
+    merchant:  Merchant = Depends(get_current_merchant)
+):
+    parcel = db.query(Parcel).filter(
+        Parcel.id          == parcel_id,
+        Parcel.merchant_id == merchant.id
+    ).first()
+
+    if not parcel:
+        return JSONResponse({"success": False, "error": "الطرد ما لقيناهش"}, status_code=404)
+
+    phone = phone.strip()
+    if not phone:
+        return JSONResponse({"success": False, "error": "الرقم فارغ"}, status_code=400)
+
+    parcel.customer_phone = phone
+    db.commit()
+    return JSONResponse({"success": True, "phone": phone})
+
+
+# ==========================================
+# عداد الطرود — يتحقق من حد الباقة
+# ==========================================
+def check_order_quota(merchant: Merchant, db: Session) -> dict:
+    """يرجع {allowed, used, limit, remaining}"""
+    from config import PLANS
+    plan_info = PLANS.get(merchant.plan, PLANS["starter"])
+    limit     = plan_info.get("orders", 500)
+    used      = db.query(Parcel).filter(Parcel.merchant_id == merchant.id).count()
+    if limit == -1:                          # Unlimited
+        return {"allowed": True, "used": used, "limit": -1, "remaining": -1}
+    return {
+        "allowed":   used < limit,
+        "used":      used,
+        "limit":     limit,
+        "remaining": max(0, limit - used),
+    }
