@@ -1,13 +1,15 @@
 """
 Webhook Handler — اكدلي
 ========================
-GET  /webhook/yalidine/{merchant_id}  ← Validation (Yalidine يتحقق من الرابط)
-POST /webhook/yalidine/{merchant_id}  ← إشعارات حقيقية
+GET  /webhook/yalidine        ← Validation (crc_token)
+GET  /webhook/yalidine/       ← نفس الشيء (trailing slash)
+POST /webhook/yalidine        ← إشعارات الطرود
 """
 
+import json as _json
 import logging
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 from database import SessionLocal
 from models import Parcel, Carrier, TrackingEvent, Notification, Merchant
 from carriers.yalidine import YalidineCarrier
@@ -15,87 +17,110 @@ from services.magic_sync import _update_parcel_and_notify
 from notifications import notify_customer
 
 logger = logging.getLogger("akdili-webhook")
-router = APIRouter(prefix="/webhook", tags=["webhook"])
+
+# prefix فارغ — المسارات كاملة في الـ decorator
+router = APIRouter(tags=["webhook"])
 
 
 # ============================================================
-# GET /webhook/yalidine/{merchant_id}
-# Yalidine يطلب GET للتحقق من الرابط — يجب أن يرجع 200 فوراً
+# Flexible route — GET + POST + trailing slash
+# /webhook/yalidine  و  /webhook/yalidine/
 # ============================================================
-@router.get("/yalidine/{merchant_id}")
-async def yalidine_webhook_validate(merchant_id: int, request: Request):
-    import json as _json
-    from fastapi.responses import Response
+@router.api_route(
+    "/webhook/yalidine",
+    methods=["GET", "POST"],
+    include_in_schema=True,
+)
+@router.api_route(
+    "/webhook/yalidine/",
+    methods=["GET", "POST"],
+    include_in_schema=False,
+)
+async def yalidine_webhook_flex(request: Request):
+    """Unified handler — GET=validation, POST=parcel events"""
 
-    # ── DEBUG: اطبع كل شيء باش نشوف ما يبعثه Yalidine ──
-    print(f"[WEBHOOK-DEBUG] GET merchant={merchant_id}")
-    print(f"[WEBHOOK-DEBUG] Headers: {dict(request.headers)}")
-    print(f"[WEBHOOK-DEBUG] Query params: {dict(request.query_params)}")
+    # ── DEBUG ──
+    print(f"[WH] {request.method} | params={dict(request.query_params)}")
+    print(f"[WH] Headers: {dict(request.headers)}")
 
-    # 1) ابحث في الـ URL params
-    crc_token = request.query_params.get("crc_token", "").strip()
+    # ════════════════════════════════════════════════════════
+    # GET — Validation (crc_token)
+    # ════════════════════════════════════════════════════════
+    if request.method == "GET":
+        crc_token = ""
 
-    # 2) ابحث في الـ JSON body
-    if not crc_token:
-        try:
-            body = await request.json()
-            crc_token = str(body.get("crc_token", "")).strip()
-            print(f"[WEBHOOK-DEBUG] JSON body: {body}")
-        except Exception:
-            pass
+        # 1) URL params
+        crc_token = request.query_params.get("crc_token", "").strip()
 
-    # 3) ابحث في الـ Form data
-    if not crc_token:
-        try:
-            form = await request.form()
-            crc_token = str(form.get("crc_token", "")).strip()
-            print(f"[WEBHOOK-DEBUG] Form data: {dict(form)}")
-        except Exception:
-            pass
+        # 2) JSON body
+        if not crc_token:
+            try:
+                body = await request.json()
+                crc_token = str(body.get("crc_token", "")).strip()
+                print(f"[WH] JSON body: {body}")
+            except Exception:
+                pass
 
-    print(f"[WEBHOOK-DEBUG] crc_token found: {repr(crc_token)}")
+        # 3) Form data
+        if not crc_token:
+            try:
+                form = await request.form()
+                crc_token = str(form.get("crc_token", "")).strip()
+                print(f"[WH] Form: {dict(form)}")
+            except Exception:
+                pass
 
-    if crc_token:
-        body = _json.dumps({"crc_token": crc_token}, separators=(",", ":"))
-        return Response(content=body, status_code=200, media_type="application/json")
+        print(f"[WH] crc_token={repr(crc_token)}")
 
-    return Response(content='{"status":"ok"}', status_code=200, media_type="application/json")
+        if crc_token:
+            return Response(
+                content=_json.dumps({"crc_token": crc_token}, separators=(",", ":")),
+                status_code=200,
+                media_type="application/json",
+            )
+        return Response(
+            content='{"status":"ok"}',
+            status_code=200,
+            media_type="application/json",
+        )
 
-
-# ============================================================
-# POST /webhook/yalidine/{merchant_id}
-# إشعارات حقيقية من Yalidine
-# ============================================================
-@router.post("/yalidine/{merchant_id}")
-async def yalidine_webhook(merchant_id: int, request: Request):
-    """
-    Universal Webhook Handler — Public (لا يحتاج login):
-    - طرد جديد  → يُنشئه في الـ DB
-    - طرد موجود → يحدث الحالة + واتساب
-    """
-    # ── قراءة الـ payload بأمان — لا خطأ 400 حتى لو فارغ ──
+    # ════════════════════════════════════════════════════════
+    # POST — Parcel events
+    # ════════════════════════════════════════════════════════
     try:
         payload = await request.json()
+        print(f"[WH] POST body: {_json.dumps(payload)[:300]}")
     except Exception:
         payload = {}
 
     if not payload:
-        # Yalidine أحياناً يبعث POST فارغ للتحقق → رد 200 فوراً
-        return JSONResponse({"status": "ok"}, status_code=200)
+        return Response(content='{"status":"ok"}', status_code=200, media_type="application/json")
 
-    logger.info(f"[WEBHOOK] POST merchant={merchant_id} | keys={list(payload.keys())}")
+    # استخرج merchant_id من الـ payload أو الـ header
+    merchant_id = (
+        payload.get("merchant_id")
+        or payload.get("user_id")
+        or request.headers.get("X-Merchant-Id")
+    )
 
     db = SessionLocal()
     try:
-        carrier_db = db.query(Carrier).filter(
-            Carrier.merchant_id  == merchant_id,
-            Carrier.carrier_code == "yalidine",
-            Carrier.is_connected == True
-        ).first()
+        # إذا ما فيش merchant_id → نبحث على أول carrier Yalidine
+        if merchant_id:
+            carrier_db = db.query(Carrier).filter(
+                Carrier.merchant_id  == int(merchant_id),
+                Carrier.carrier_code == "yalidine",
+                Carrier.is_connected == True
+            ).first()
+        else:
+            carrier_db = db.query(Carrier).filter(
+                Carrier.carrier_code == "yalidine",
+                Carrier.is_connected == True
+            ).first()
 
         if not carrier_db:
-            logger.warning(f"[WEBHOOK] لا شركة Yalidine مربوطة للتاجر {merchant_id}")
-            return JSONResponse({"ok": False, "reason": "carrier not connected"}, status_code=200)
+            print("[WH] No Yalidine carrier found")
+            return Response(content='{"ok":false,"reason":"no carrier"}', status_code=200, media_type="application/json")
 
         carrier_obj = YalidineCarrier(
             api_key=carrier_db.api_key or "",
@@ -104,120 +129,90 @@ async def yalidine_webhook(merchant_id: int, request: Request):
 
         parcel_data = _extract_webhook_parcel(payload)
         if not parcel_data:
-            return JSONResponse({"ok": True, "reason": "no parcel data"}, status_code=200)
+            return Response(content='{"ok":true,"reason":"no parcel data"}', status_code=200, media_type="application/json")
 
         tracking   = parcel_data["tracking"]
         raw_status = parcel_data["raw_status"]
         new_status = carrier_obj.normalize_status(raw_status)
         location   = parcel_data.get("location", "")
 
-        logger.info(f"[WEBHOOK] {tracking} | raw={raw_status} | normalized={new_status}")
+        print(f"[WH] {tracking} raw={raw_status} → {new_status}")
 
-        existing = db.query(Parcel).filter(
-            Parcel.tracking_number == tracking
-        ).first()
+        existing = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
 
         if existing:
             if new_status and new_status != existing.current_status:
                 _update_parcel_and_notify(db, existing, new_status, location, source="webhook")
                 db.commit()
-                return JSONResponse({"ok": True, "action": "updated", "tracking": tracking})
-            return JSONResponse({"ok": True, "action": "no_change", "tracking": tracking})
+                return Response(content=_json.dumps({"ok":True,"action":"updated","tracking":tracking}),
+                                status_code=200, media_type="application/json")
+            return Response(content='{"ok":true,"action":"no_change"}', status_code=200, media_type="application/json")
 
-        else:
-            merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
-            if not merchant:
-                return JSONResponse({"ok": False, "reason": "merchant not found"}, status_code=200)
-
-            status_final = new_status or "at_origin"
-            new_parcel   = Parcel(
-                merchant_id     = merchant_id,
-                carrier_id      = carrier_db.id,
-                tracking_number = tracking,
-                customer_name   = parcel_data.get("customer_name", "زبون"),
-                customer_phone  = parcel_data.get("customer_phone", "0000000000"),
-                wilaya          = location,
-                delivery_type   = parcel_data.get("delivery_type", "home"),
-                current_status  = status_final,
-                is_active       = status_final not in {"delivered", "returned"},
+        # طرد جديد
+        merchant = db.query(Merchant).filter(Merchant.id == carrier_db.merchant_id).first()
+        status_final = new_status or "at_origin"
+        new_parcel = Parcel(
+            merchant_id     = carrier_db.merchant_id,
+            carrier_id      = carrier_db.id,
+            tracking_number = tracking,
+            customer_name   = parcel_data.get("customer_name", "زبون"),
+            customer_phone  = parcel_data.get("customer_phone", "0000000000"),
+            wilaya          = location,
+            delivery_type   = parcel_data.get("delivery_type", "home"),
+            current_status  = status_final,
+            is_active       = status_final not in {"delivered", "returned"},
+        )
+        db.add(new_parcel)
+        db.flush()
+        db.add(TrackingEvent(
+            parcel_id   = new_parcel.id,
+            status      = status_final,
+            location    = location,
+            description = f"[webhook] {raw_status}"
+        ))
+        if new_parcel.customer_phone != "0000000000":
+            notif = notify_customer(
+                phone=new_parcel.customer_phone,
+                tracking_number=tracking,
+                status=status_final,
+                delivery_type=new_parcel.delivery_type,
+                merchant_name=merchant.name if merchant else ""
             )
-            db.add(new_parcel)
-            db.flush()
-
-            event = TrackingEvent(
-                parcel_id   = new_parcel.id,
-                status      = status_final,
-                location    = location,
-                description = f"[webhook] استيراد تلقائي — {raw_status}"
-            )
-            db.add(event)
-
-            if new_parcel.customer_phone != "0000000000":
-                notif_result = notify_customer(
-                    phone           = new_parcel.customer_phone,
-                    tracking_number = tracking,
-                    status          = status_final,
-                    delivery_type   = new_parcel.delivery_type,
-                    merchant_name   = merchant.name
-                )
-                if notif_result.get("whatsapp_sent"):
-                    db.add(Notification(
-                        parcel_id = new_parcel.id,
-                        channel   = "whatsapp",
-                        phone     = new_parcel.customer_phone,
-                        message   = f"[webhook-new] إشعار {status_final}",
-                        status    = "sent"
-                    ))
-                    event.whatsapp_sent = True
-
-            db.commit()
-            logger.info(f"[WEBHOOK] ✅ طرد جديد مستورد: {tracking}")
-            return JSONResponse({"ok": True, "action": "created", "tracking": tracking})
+            if notif.get("whatsapp_sent"):
+                db.add(Notification(parcel_id=new_parcel.id, channel="whatsapp",
+                    phone=new_parcel.customer_phone, message=f"[wh] {status_final}", status="sent"))
+        db.commit()
+        print(f"[WH] ✅ created {tracking}")
+        return Response(content=_json.dumps({"ok":True,"action":"created","tracking":tracking}),
+                        status_code=200, media_type="application/json")
 
     except Exception as e:
         db.rollback()
-        logger.error(f"[WEBHOOK] ❌ خطأ: {e}")
-        # نرجع 200 دائماً — Yalidine ما يعيدش المحاولة على 500
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=200)
+        print(f"[WH] ❌ {e}")
+        return Response(content=_json.dumps({"ok":False,"error":str(e)}),
+                        status_code=200, media_type="application/json")
     finally:
         db.close()
 
 
-# ============================================================
-# Helper — استخرج بيانات الطرد من payload Yalidine
-# ============================================================
-def _extract_webhook_parcel(payload: dict) -> dict | None:
+# ────────────────────────────────────────────────────────────
+# helper
+# ────────────────────────────────────────────────────────────
+def _extract_webhook_parcel(payload: dict):
     data = payload.get("parcel") or payload.get("data") or payload
-
-    tracking = (
-        data.get("tracking") or data.get("id") or
-        data.get("tracking_number") or data.get("barcode") or ""
-    )
+    tracking = (data.get("tracking") or data.get("id") or
+                data.get("tracking_number") or data.get("barcode") or "")
     if not tracking:
         return None
-
-    raw_status = (
-        data.get("last_status") or data.get("status") or
-        data.get("state") or ""
-    )
-    firstname      = data.get("firstname", "") or data.get("first_name", "")
-    familyname     = data.get("familyname", "") or data.get("last_name", "")
-    customer_name  = f"{firstname} {familyname}".strip() or "زبون"
-    customer_phone = (
-        data.get("contact_phone") or data.get("phone") or
-        data.get("receiver_phone") or "0000000000"
-    )
-    location      = (
-        data.get("to_wilaya_name") or data.get("last_update_wilaya") or
-        data.get("wilaya") or ""
-    )
+    raw_status    = data.get("last_status") or data.get("status") or data.get("state") or ""
+    firstname     = data.get("firstname", "") or data.get("first_name", "")
+    familyname    = data.get("familyname", "") or data.get("last_name", "")
+    customer_name = f"{firstname} {familyname}".strip() or "زبون"
+    customer_phone = (data.get("contact_phone") or data.get("phone") or
+                      data.get("receiver_phone") or "0000000000")
+    location      = (data.get("to_wilaya_name") or data.get("last_update_wilaya") or
+                     data.get("wilaya") or "")
     delivery_type = "home" if data.get("product_list") or data.get("delivery_type") == "home" else "office"
-
-    return {
-        "tracking":       str(tracking),
-        "raw_status":     raw_status,
-        "customer_name":  customer_name,
-        "customer_phone": customer_phone,
-        "location":       location,
-        "delivery_type":  delivery_type,
-    }
+    return {"tracking": str(tracking), "raw_status": raw_status,
+            "customer_name": customer_name, "customer_phone": customer_phone,
+            "location": location, "delivery_type": delivery_type}
