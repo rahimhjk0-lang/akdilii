@@ -152,3 +152,102 @@ class YalidineCarrier(BaseCarrier):
         if result is None:
             print(f"[NORMALIZE DEBUG] حالة غير معروفة: {repr(raw_status)} — لن يتم تحديث الطرد")
         return result
+
+    # ============================================================
+    # MAGIC SYNC — جلب الطرود النشطة صفحة بصفحة
+    # ============================================================
+    TERMINAL_FR = {"Livré", "Retourné", "Retour reçu", "Echoué"}
+
+    def get_active_parcels_page(self, page: int = 1, page_size: int = 50) -> tuple:
+        """
+        يجيب صفحة من الطرود غير المكتملة.
+        يرجع: (list_of_parcels, has_more: bool)
+        """
+        import time
+        for attempt in range(3):
+            try:
+                resp = requests.get(
+                    f"{self.BASE_URL}/parcels/",
+                    headers=self._headers(),
+                    params={"page_size": page_size, "page": page},
+                    timeout=20
+                )
+                if resp.status_code == 429:
+                    print(f"[YALIDINE] Rate limit — ننتظر 30 ثانية")
+                    time.sleep(30)
+                    continue
+                if resp.status_code == 200:
+                    body       = resp.json()
+                    all_data   = body.get("data", [])
+                    total      = body.get("total_data", 0)
+                    # فلتر الطرود المكتملة
+                    active     = [p for p in all_data if p.get("last_status","") not in self.TERMINAL_FR]
+                    has_more   = (page * page_size) < total
+                    return active, has_more
+                return [], False
+            except Exception as e:
+                print(f"[YALIDINE] get_active_parcels_page error attempt {attempt+1}: {e}")
+                time.sleep(2)
+        return [], False
+
+    # ============================================================
+    # BATCH TRACK — 10 tracking numbers لكل request
+    # ============================================================
+    def batch_track(self, tracking_numbers: list) -> dict:
+        """
+        يتتبع قائمة طرود دفعة واحدة (comma-separated).
+        يرجع: {tracking_number: {status, location}}
+        """
+        import time
+        results = {}
+        if not tracking_numbers:
+            return results
+
+        # Yalidine يدعم comma-separated في param tracking
+        joined = ",".join(str(t) for t in tracking_numbers)
+
+        for attempt in range(3):
+            try:
+                resp = requests.get(
+                    f"{self.BASE_URL}/parcels/",
+                    headers=self._headers(),
+                    params={"tracking": joined, "page_size": len(tracking_numbers)},
+                    timeout=20
+                )
+                if resp.status_code == 429:
+                    print(f"[YALIDINE BATCH] Rate limit — ننتظر 30 ثانية")
+                    time.sleep(30)
+                    continue
+                if resp.status_code == 200:
+                    data = resp.json().get("data", [])
+                    for p in data:
+                        t          = str(p.get("tracking") or p.get("id") or "")
+                        raw        = p.get("last_status") or p.get("status") or ""
+                        normalized = self.normalize_status(raw)
+                        if t:
+                            results[t] = {
+                                "status":   normalized,
+                                "location": p.get("last_update_wilaya", ""),
+                                "raw":      raw
+                            }
+                    return results
+                # إذا batch ما اشتغلش → fallback فردي
+                if resp.status_code == 400:
+                    print(f"[YALIDINE BATCH] Batch غير مدعوم — fallback فردي")
+                    return self._batch_track_individual(tracking_numbers)
+                return results
+            except Exception as e:
+                print(f"[YALIDINE BATCH] error attempt {attempt+1}: {e}")
+                time.sleep(2)
+        return results
+
+    def _batch_track_individual(self, tracking_numbers: list) -> dict:
+        """Fallback: track one by one مع rate limit"""
+        import time
+        results = {}
+        for t in tracking_numbers:
+            r = self.track_parcel(str(t))
+            if r and r.get("status"):
+                results[str(t)] = r
+            time.sleep(1.1)
+        return results
