@@ -52,6 +52,15 @@ app = FastAPI(
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# ── Yalidine Webhook Validation (/check) ──────────────────
+@app.get("/check")
+async def yalidine_check(request: Request):
+    crc = request.query_params.get("crc_token", "")
+    print(f"[CHECK] crc_token={repr(crc)}")
+    return {"crc_token": crc}
+
+
+
 # routes
 app.include_router(auth_router)
 app.include_router(dashboard_router)
