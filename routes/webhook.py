@@ -14,12 +14,19 @@ router = APIRouter(tags=["webhook"])
 
 # ── GET: Yalidine validation ─────────────────────────────────
 @router.get("/webhook/yalidine")
-@router.get("/webhook/yalidine/", include_in_schema=False)
 async def yalidine_validate(crc_token: Optional[str] = None):
-    print(f"Received CRC Token: {crc_token}")
-    if crc_token:
-        return {"crc_token": crc_token}
-    return {"status": "ok"}
+    try:
+        print(f"[WH-VALIDATE] crc_token={repr(crc_token)}")
+        if crc_token:
+            return JSONResponse(
+                content={"crc_token": crc_token},
+                status_code=200,
+                media_type="application/json"
+            )
+        return JSONResponse(content={"status": "ok"}, status_code=200, media_type="application/json")
+    except Exception as e:
+        print(f"[WH-VALIDATE] error: {e}")
+        return JSONResponse(content={"status": "ok"}, status_code=200, media_type="application/json")
 
 
 # ── POST: parcel events ──────────────────────────────────────
