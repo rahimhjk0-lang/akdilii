@@ -39,8 +39,17 @@ def _ensure_worker():
             t.start()
             _wa_worker_started = True
 
+def send_whatsapp(phone: str, message: str) -> bool:
+    """
+    يضيف الرسالة للـ Queue — fire-and-forget.
+    """
+    _ensure_worker()
+    _wa_queue.put((phone, message, None))
+    return True
+
+
 def _send_whatsapp_direct(phone: str, message: str) -> bool:
-    """إرسال مباشر عبر Green API — يُستدعى من الـ Queue Worker فقط"""
+    """إرسال مباشر عبر Green API — مع try-except قوية لأي رد فارغ أو خاطئ"""
     try:
         if not GREEN_API_INSTANCE or not GREEN_API_TOKEN:
             print("⚠️ Green API غير مضبوط")
@@ -54,25 +63,32 @@ def _send_whatsapp_direct(phone: str, message: str) -> bool:
             json={"chatId": chat_id, "message": message},
             timeout=15
         )
-        data = resp.json()
+
+        # ── تحليل الرد بأمان — أي رد فارغ أو HTML لا يوقف الكود ──
+        raw_text = resp.text.strip() if resp.text else ""
+        if not raw_text:
+            print(f"❌ Green API: رد فارغ تماماً → {phone}")
+            return False
+
+        try:
+            data = resp.json()
+        except Exception:
+            print(f"❌ Green API: رد غير JSON ({raw_text[:80]}) → {phone}")
+            return False
+
         if data.get("idMessage"):
             print(f"✅ واتساب وصل → {phone}")
             return True
+
         print(f"❌ واتساب فشل → {phone} | {data}")
         return False
-    except Exception as e:
-        print(f"❌ خطأ واتساب: {e}")
+
+    except requests.exceptions.Timeout:
+        print(f"❌ Green API: timeout → {phone}")
         return False
-
-
-def send_whatsapp(phone: str, message: str) -> bool:
-    """
-    يضيف الرسالة للـ Queue — يرجع True فوراً (fire-and-forget).
-    الـ Worker يبعث كل رسالة بعد 3-5 ثواني من السابقة.
-    """
-    _ensure_worker()
-    _wa_queue.put((phone, message, None))
-    return True  # نفترض النجاح — الـ scheduler يتتبع الـ DB
+    except Exception as e:
+        print(f"❌ خطأ واتساب ({phone}): {e}")
+        return False
 
 
 # ==========================================
