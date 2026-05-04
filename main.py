@@ -7,6 +7,39 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+# ══════════════════════════════════════════════════════════
+# ASGI CRC Middleware — يرد على crc_token قبل أي Router
+# ══════════════════════════════════════════════════════════
+import json as _json
+from starlette.types import ASGIApp, Scope, Receive, Send
+from starlette.responses import Response
+
+class CrcMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            qs = scope.get("query_string", b"").decode("utf-8", errors="ignore")
+            if "crc_token" in qs:
+                # استخرج قيمة crc_token من الـ query string
+                crc = ""
+                for part in qs.split("&"):
+                    if part.startswith("crc_token="):
+                        crc = part.split("=", 1)[1]
+                        break
+                body = _json.dumps({"crc_token": crc}).encode()
+                print(f"[CRC-MIDDLEWARE] intercepted crc_token={repr(crc)}")
+                resp = Response(
+                    content=body,
+                    status_code=200,
+                    media_type="application/json"
+                )
+                await resp(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
 from contextlib import asynccontextmanager
 from database import init_db
 from scheduler import start_scheduler, stop_scheduler
@@ -51,6 +84,16 @@ app = FastAPI(
 # static folder
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# تطبيق CRC Middleware
+app.add_middleware(CrcMiddleware)
+
+
+# ── Yalidine Backup Routes ────────────────────────────────
+@app.get("/verify_yali_2026")
+async def yali_verify(request: Request):
+    crc = request.query_params.get("crc_token", "")
+    print(f"[VERIFY] crc_token={repr(crc)}")
+    return {"crc_token": crc}
 
 # ── Yalidine Webhook Validation (/check) ──────────────────
 @app.get("/check")
