@@ -327,6 +327,7 @@ class YalidineCarrier(BaseCarrier):
             "En attente de collecte": "at_origin",
             "Collecté":               "in_transit",
             "En transit":             "in_transit",
+            "Vers Wilaya":            "in_transit",
             "Arrivé wilaya":          "at_destination",
             "En cours de livraison":  "out_for_delivery",
             "Sorti en livraison":     "out_for_delivery",
@@ -334,6 +335,8 @@ class YalidineCarrier(BaseCarrier):
             "Tentative échouée":      "failed_attempt",
             "Retourné":               "returned",
             "Retour reçu":            "returned",
+            "Retourné au vendeur":    "returned",
+            "Retour à retirer":       "returned",
             # ─── إنجليزية ───
             "pending":          "at_origin",
             "preparing":        "at_origin",
