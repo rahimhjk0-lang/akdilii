@@ -21,54 +21,22 @@ class CrcMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
-            qs   = scope.get("query_string", b"").decode("utf-8", errors="ignore")
-            path = scope.get("path", "")
+            qs = scope.get("query_string", b"").decode("utf-8", errors="ignore")
             if "crc_token" in qs:
-                import hmac, hashlib, re as _re
-                from database import SessionLocal
-                from models import Carrier
-
-                # استخرج crc_token
-                crc = ""
-                for part in qs.split("&"):
-                    if part.startswith("crc_token="):
-                        crc = part.split("=", 1)[1]
-                        break
-
-                print(f"[CRC-MIDDLEWARE] path={path} crc_token={repr(crc)}")
-
-                # استخرج merchant_id من الـ path مثل /webhook/yalidine/1
-                merchant_id = None
-                m = _re.search(r"/webhook/yalidine/(\d+)", path)
-                if m:
-                    merchant_id = int(m.group(1))
-
-                # جيب API key من DB
-                api_key = ""
-                try:
-                    db = SessionLocal()
-                    q  = db.query(Carrier).filter(Carrier.carrier_code == "yalidine", Carrier.is_connected == True)
-                    if merchant_id:
-                        q = q.filter(Carrier.merchant_id == merchant_id)
-                    c = q.first()
-                    if c:
-                        api_key = c.api_key or ""
-                    db.close()
-                except Exception as e:
-                    print(f"[CRC-MIDDLEWARE] DB error: {e}")
-
-                # احسب HMAC-SHA256
-                if api_key and crc:
-                    sig = hmac.new(api_key.encode(), crc.encode(), hashlib.sha256).hexdigest()
-                    body = _json.dumps({"x-yalidine-signature": sig}).encode()
-                    print(f"[CRC-MIDDLEWARE] signature={sig[:20]}...")
-                else:
-                    # fallback: echo crc_token مباشرة
-                    body = _json.dumps({"crc_token": crc}).encode()
-                    print(f"[CRC-MIDDLEWARE] fallback echo (no api_key)")
-
-                resp = Response(content=body, status_code=200, media_type="application/json")
-                await resp(scope, receive, send)
+                from urllib.parse import parse_qs, unquote
+                params = parse_qs(qs)
+                crc_list = params.get("crc_token", [])
+                crc = unquote(crc_list[0]) if crc_list else ""
+                print(f"[CRC] crc_token={repr(crc)}")
+                body = (_json.dumps({"crc_token": crc}, separators=(",", ":"))
+                        .encode("utf-8"))
+                await send({"type": "http.response.start",
+                            "status": 200,
+                            "headers": [
+                                (b"content-type", b"application/json"),
+                                (b"content-length", str(len(body)).encode()),
+                            ]})
+                await send({"type": "http.response.body", "body": body})
                 return
         await self.app(scope, receive, send)
 
