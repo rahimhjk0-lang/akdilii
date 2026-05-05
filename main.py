@@ -21,70 +21,27 @@ class CrcMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
-            qs = scope.get("query_string", b"").decode("utf-8", errors="ignore")
-            if "crc_token" in qs:
-                from urllib.parse import parse_qs, unquote
-                params = parse_qs(qs)
-                crc_list = params.get("crc_token", [])
-                crc = unquote(crc_list[0]) if crc_list else ""
+            from urllib.parse import parse_qs, unquote
+            qs     = scope.get("query_string", b"").decode("utf-8", errors="ignore")
+            params = parse_qs(qs)
+
+            crc_list = params.get("crc_token", [])
+            crc      = unquote(crc_list[0]) if crc_list else ""
+
+            if crc:
                 print(f"[CRC] crc_token={repr(crc)}")
-                body = (_json.dumps({"crc_token": crc}, separators=(",", ":"))
-                        .encode("utf-8"))
+                # Yalidine docs: echo crc_token as plain text directly
+                body = crc.encode("utf-8")
                 await send({"type": "http.response.start",
                             "status": 200,
                             "headers": [
-                                (b"content-type", b"application/json"),
+                                (b"content-type",   b"text/plain; charset=utf-8"),
                                 (b"content-length", str(len(body)).encode()),
                             ]})
                 await send({"type": "http.response.body", "body": body})
                 return
+
         await self.app(scope, receive, send)
-
-from contextlib import asynccontextmanager
-from database import init_db
-from scheduler import start_scheduler, stop_scheduler
-from routes.auth import router as auth_router
-from routes.dashboard import router as dashboard_router
-from routes.admin import router as admin_router
-from routes.billing import router as billing_router
-from routes.webhook import router as webhook_router
-
-# ==========================================
-# Keep-Alive — يمنع Render من النوم
-# ==========================================
-def keep_alive():
-    """ping كل 14 دقيقة باش ما ينامش"""
-    time.sleep(60)  # ننتظر دقيقة بعد البدء
-    while True:
-        try:
-            url = os.environ.get("APP_URL", "https://akdilii.onrender.com")
-            requests.get(f"{url}/health", timeout=10)
-            print("💓 Keep-alive ping")
-        except Exception:
-            pass
-        time.sleep(14 * 60)  # كل 14 دقيقة
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    init_db()
-    start_scheduler()
-    # شغّل keep-alive في thread منفصل
-    t = threading.Thread(target=keep_alive, daemon=True)
-    t.start()
-    print("🚀 Akdili شغال!")
-    yield
-    stop_scheduler()
-
-app = FastAPI(
-    title    = "Akdili — اكدلي",
-    version  = "1.0.0",
-    lifespan = lifespan
-)
-
-# static folder
-os.makedirs("static", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-# تطبيق CRC Middleware
 app.add_middleware(CrcMiddleware)
 
 
