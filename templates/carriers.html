@@ -25,10 +25,10 @@
             <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.78rem;">
                 <strong>📡 رابط الإشعارات (Webhook):</strong><br>
                 <code style="word-break:break-all;font-size:0.72rem;">
-                    https://akdilii.onrender.com/webhook/yalidine/{{ merchant.id }}
+                    https://akdili.online/yalidine_webhook.php?token={{ merchant.webhook_token or '' }}
                 </code><br>
                 <button class="btn btn-outline-secondary btn-sm mt-1 py-0"
-                    onclick="navigator.clipboard.writeText('https://akdilii.onrender.com/webhook/yalidine/{{ merchant.id }}');this.innerHTML='✅ تم النسخ'">
+                    onclick="navigator.clipboard.writeText('https://akdili.online/yalidine_webhook.php?token={{ merchant.webhook_token or '' }}');this.innerHTML='✅ تم النسخ'">
                     📋 نسخ الرابط
                 </button>
                 <div class="text-muted mt-1" style="font-size:0.7rem;">
@@ -314,7 +314,7 @@ async function connectCarrier(e) {
         bootstrap.Modal.getInstance(document.getElementById('carrierModal')).hide();
         // إذا Yalidine → اعرض رابط الـ Webhook
         if (data.get('carrier_code') === 'yalidine') {
-            const webhookUrl = `https://akdilii.onrender.com/webhook/yalidine/{{ merchant.id }}`;
+            const webhookUrl = `https://akdili.online/yalidine_webhook.php?token={{ merchant.webhook_token or '' }}`;
             const msg = `✅ تم ربط Yalidine!\n\n` +
                 `📦 جاري استيراد طرودك تلقائياً...\n\n` +
                 `─────────────────────────────\n` +
@@ -324,6 +324,10 @@ async function connectCarrier(e) {
                 `الإعدادات ← Webhook ← الصق الرابط\n\n` +
                 `(مرة واحدة فقط — يخليك تستقبل تحديثات فورية)`;
             // نسخ الرابط تلقائياً
+            showWebhookPopup(webhookUrl);
+            }
+
+            function showWebhookPopup(webhookUrl) {
             navigator.clipboard.writeText(webhookUrl).catch(()=>{});
             alert(msg);
         } else {
