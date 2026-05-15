@@ -179,9 +179,9 @@ async def generate_webhook_token(request: Request):
 
         if not merchant.webhook_token:
             merchant.webhook_token = secrets.token_urlsafe(32)
-            db2.commit()
+            db.commit()
 
         webhook_url = f"https://akdili.online/yalidine_webhook.php?token={merchant.webhook_token}"
         return JSONResponse({"token": merchant.webhook_token, "webhook_url": webhook_url})
     finally:
-        db2.close()
+        db.close()
