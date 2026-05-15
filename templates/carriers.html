@@ -33,6 +33,11 @@
                 </button>
                 <div class="text-muted mt-1" style="font-size:0.7rem;">
                     أضفه في لوحة Yalidine: الإعدادات ← Webhook
+                    <br><button class="btn btn-sm mt-2" 
+                        style="background:#c9a96e;color:white;border-radius:8px;"
+                        onclick="getWebhookToken()">
+                        🔑 احصل على رابط Webhook
+                    </button>
                 </div>
             </div>
             {% endif %}
@@ -353,6 +358,42 @@ async function disconnectCarrier(code) {
     if (json.success) location.reload();
     else alert('❌ ' + (json.error || 'خطأ'));
 }
-</script>
+
+        // ═══════════════════════════════════════════════
+        // احصل على رابط Webhook
+        // ═══════════════════════════════════════════════
+        async function getWebhookToken() {
+            try {
+                const res  = await fetch('/api/generate-webhook-token', {credentials: 'include'});
+                const data = await res.json();
+                if (data.webhook_url) {
+                    navigator.clipboard.writeText(data.webhook_url).catch(()=>{});
+                    Swal.fire({
+                        title: '📡 رابط Webhook خاصك',
+                        html: `
+                            <div style="background:#1a1a2e;border-radius:10px;padding:15px;margin:10px 0;">
+                                <code style="color:#c9a96e;word-break:break-all;font-size:12px;">
+                                    ${data.webhook_url}
+                                </code>
+                            </div>
+                            <p style="color:#aaa;font-size:13px;">✅ تم النسخ تلقائياً!</p>
+                            <p style="color:#aaa;font-size:12px;">
+                                الصقه في لوحة Yalidine:<br>
+                                <strong>الإعدادات → Webhook</strong>
+                            </p>`,
+                        icon: 'success',
+                        confirmButtonText: 'تم ✓',
+                        confirmButtonColor: '#c9a96e',
+                        background: '#16213e',
+                        color: '#fff'
+                    });
+                } else {
+                    alert('خطأ: ' + (data.error || 'حاول مرة ثانية'));
+                }
+            } catch(e) {
+                alert('خطأ في الاتصال بالسيرفر');
+            }
+        }
+    </script>
 {% endblock %}
 {% endblock %}
