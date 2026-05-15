@@ -21,6 +21,7 @@ def build_engine(url_str: str):
         userinfo, hostinfo = rest.rsplit("@", 1)             # split من آخر @
         raw_user, raw_pass = userinfo.split(":", 1)          # split من أول :
         host_port, database = hostinfo.split("/", 1)         # split من أول /
+        database = database.split("?")[0]                    # نحذف ?sslmode=require وما شابهها
         if ":" in host_port:
             host, port_str = host_port.rsplit(":", 1)
             port = int(port_str)
