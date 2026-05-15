@@ -46,7 +46,7 @@
             </button>
         {% else %}
             <p class="text-muted small mb-3">{{ info.name }} — اربط حسابك</p>
-            <button class="btn btn-primary-custom w-100 btn-sm" onclick="openModal('{{ code }}')">
+            <button class="btn btn-primary-custom w-100 btn-sm" onclick="openCarrierModal('{{ code }}', {{ info | tojson }})">
                 <i class="fas fa-link ms-1"></i> ربط {{ info.name }}
             </button>
         {% endif %}
@@ -114,23 +114,57 @@
 // ============================================================
 // فتح Modal الشركة
 // ============================================================
-const carrierConfigs = {};
+const carrierConfigs = {
+    "yalidine": {
+        field1: { label: "API ID", placeholder: "المعرّف من لوحة Yalidine" },
+        field2: { label: "API Token", placeholder: "المفتاح الطويل" },
+        hints: `<div class="alert alert-warning py-2 px-3 small mb-0">
+            <strong>من أين تحصل عليها؟</strong><br>
+            اذهب لـ <a href="https://yalidine.app/app/dev/index.php" target="_blank" style="color:#c9a96e;">yalidine.app → Developer</a><br>
+            انسخ <strong>API ID</strong> و <strong>API Token</strong> وضعهم أدناه
+        </div>`
+    },
+    "zr_express": {
+        field1: { label: "API Token", placeholder: "المفتاح من لوحة ZR Express" },
+        hints: `<div class="alert alert-info py-2 px-3 small mb-0">اذهب لـ <strong>الإعدادات → API Token</strong> في حسابك</div>`
+    },
+    "ecotrack": {
+        field1: { label: "API Token", placeholder: "المفتاح من لوحة Ecotrack" },
+        hints: `<div class="alert alert-info py-2 px-3 small mb-0">اذهب لـ <strong>Paramètres → Token</strong></div>`
+    },
+    "procolis": {
+        field1: { label: "API Token", placeholder: "المفتاح من Profil → API" },
+        hints: `<div class="alert alert-info py-2 px-3 small mb-0">اذهب لـ <strong>Profil → Token API</strong></div>`
+    },
+    "maystro": {
+        field1: { label: "API Token", placeholder: "المفتاح من إعدادات Maystro" },
+        hints: `<div class="alert alert-info py-2 px-3 small mb-0">اذهب لـ <strong>Paramètres → API Token</strong></div>`
+    },
+    "guepex": {
+        field1: { label: "API Token", placeholder: "المفتاح من إعدادات Guepex" },
+        hints: `<div class="alert alert-info py-2 px-3 small mb-0">اذهب لـ <strong>Paramètres → API Token</strong></div>`
+    },
+    "ecom_delivery": {
+        field1: { label: "API Token", placeholder: "المفتاح من حسابك" },
+        hints: `<div class="alert alert-info py-2 px-3 small mb-0">انسخ <strong>Token</strong> من إعدادات حسابك</div>`
+    }
+};
 
 function openCarrierModal(code, info) {
-    document.getElementById('carrierCode').value  = code;
-    document.getElementById('modalCarrierName').textContent = info.name || code;
+    document.getElementById('modalCarrierCode').value = code;
+    document.getElementById('modalTitle').textContent = '🔑 ربط ' + (info.name || code);
 
     const f1Label = document.getElementById('field1Label');
     const f1Input = document.getElementById('field1Input');
-    const f2Row   = document.getElementById('field2Row');
+    const f2Row   = document.getElementById('field2Wrap');
     const f2Label = document.getElementById('field2Label');
     const f2Input = document.getElementById('field2Input');
-    const hints   = document.getElementById('carrierHints');
+    
 
     const cfg = carrierConfigs[code] || {};
 
     f1Label.textContent       = cfg.field1?.label       || 'API ID';
-    f1Input.placeholder       = cfg.field1?.placeholder || '';
+    f1Input.placeholder = cfg.field1?.placeholder || ''; document.getElementById('field1Hint').textContent = cfg.field1?.hint || '';
     f1Input.value             = '';
 
     if (cfg.field2) {
@@ -143,7 +177,7 @@ function openCarrierModal(code, info) {
         f2Input.value         = '';
     }
 
-    hints.innerHTML = cfg.hints || '';
+    document.getElementById('modalSteps').innerHTML = cfg.hints || '';
     new bootstrap.Modal(document.getElementById('carrierModal')).show();
 }
 
