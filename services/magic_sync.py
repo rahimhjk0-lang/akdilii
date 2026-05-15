@@ -257,11 +257,24 @@ def daily_batch_audit() -> dict:
 def register_yalidine_webhook(carrier_db) -> dict:
     """
     يسجل Webhook URL في حساب Yalidine الخاص بالتاجر.
-    URL: {APP_URL}/webhook/yalidine/{merchant_id}
+    URL: https://akdili.online/yalidine_webhook.php?token=MERCHANT_TOKEN
     """
     import requests as req_lib
+    from database import SessionLocal as _SL
+    from models import Merchant as _M
 
-    webhook_url = f"{APP_URL}/webhook/yalidine/{carrier_db.merchant_id}"
+    # جيب webhook_token تاع التاجر
+    _db = _SL()
+    try:
+        _merchant = _db.query(_M).filter(_M.id == carrier_db.merchant_id).first()
+        _wh_token = _merchant.webhook_token if _merchant else None
+    finally:
+        _db.close()
+
+    if _wh_token:
+        webhook_url = f"https://akdili.online/yalidine_webhook.php?token={_wh_token}"
+    else:
+        webhook_url = f"{APP_URL}/webhook/yalidine/{carrier_db.merchant_id}"
     headers     = {
         "X-API-ID":     getattr(carrier_db, "api_id", "") or "",
         "X-API-TOKEN":  carrier_db.api_key or "",
