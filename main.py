@@ -106,6 +106,22 @@ async def home(request: Request):
 async def health():
     return {"status": "OK", "app": "Akdili"}
 
+@app.get("/debug-db")
+async def debug_db():
+    """يختبر اتصال DB ويرجع النتيجة"""
+    try:
+        from database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1")).fetchone()
+        from config import DATABASE_URL
+        safe_url = DATABASE_URL[:30] + "..." if len(DATABASE_URL) > 30 else DATABASE_URL
+        return {"db": "✅ متصل", "url_preview": safe_url, "test": str(result)}
+    except Exception as e:
+        from config import DATABASE_URL
+        safe_url = DATABASE_URL[:30] + "..." if len(DATABASE_URL) > 30 else DATABASE_URL
+        return {"db": "❌ فاشل", "error": str(e), "url_preview": safe_url}
+
 # ── Yalidine Backup Routes (fallback) ─────────────────────
 @app.get("/verify_yali_2026")
 async def yali_verify(request: Request):
