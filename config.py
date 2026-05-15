@@ -20,13 +20,13 @@ _db_url = os.getenv("DATABASE_URL", "sqlite:///./akdili.db").strip()
 DATABASE_URL = _db_url.replace("postgres://", "postgresql://", 1) if _db_url.startswith("postgres://") else _db_url
 
 # ---- Chargily Pay ----
-CHARGILY_API_KEY        = os.getenv("CHARGILY_API_KEY", "")
+CHARGILY_API_KEY        = os.getenv("CHARGILY_API_KEY", "live_sk_Ao6mTVrzLG1VYjKBy0c49tlYwRshIgRfvbIG0mUT")
 CHARGILY_WEBHOOK_SECRET = os.getenv("CHARGILY_WEBHOOK_SECRET", "")
-APP_URL                 = os.getenv("APP_URL", "https://akdilii.onrender.com")
+APP_URL                 = os.getenv("APP_URL", "https://akdili.online")
 
 # ---- Green API واتساب ----
-GREEN_API_INSTANCE = os.getenv("GREEN_API_INSTANCE", "")
-GREEN_API_TOKEN    = os.getenv("GREEN_API_TOKEN", "")
+GREEN_API_INSTANCE = os.getenv("GREEN_API_INSTANCE", "7107592941")
+GREEN_API_TOKEN    = os.getenv("GREEN_API_TOKEN", "bde1e15408c7459e9d517283a4eacbfbfefcafc6724c4b2e8")
 
 # ---- SMS ----
 SMS_API_KEY = os.getenv("SMS_API_KEY", "")
