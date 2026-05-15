@@ -124,17 +124,11 @@ def _extract(payload):
 # /api/merchant-by-token — للـ PHP Bridge
 # ============================================================
 @router.get("/api/merchant-by-token")
-async def merchant_by_token(token: str = None, db=None):
+async def merchant_by_token(token: str = None):
     """يرجع بيانات التاجر للـ PHP Bridge بواسطة webhook_token"""
-    from fastapi import Depends
-    from database import get_db
-    from models import Merchant, Carrier
-
     if not token:
-        from fastapi.responses import JSONResponse
         return JSONResponse({"error": "missing token"}, status_code=400)
 
-    from database import SessionLocal
     db = SessionLocal()
     try:
         merchant = db.query(Merchant).filter(Merchant.webhook_token == token).first()
@@ -167,14 +161,8 @@ async def merchant_by_token(token: str = None, db=None):
 async def generate_webhook_token(request: Request):
     """يولد webhook_token جديد للتاجر"""
     import secrets
-    from database import SessionLocal
-    from models import Merchant
-    from routes.auth import get_current_merchant
-    from database import get_db
-    from fastapi import Depends
-
-    # simple auth via cookie
     from routes.auth import verify_token
+
     t = request.cookies.get("akdili_token")
     if not t:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
@@ -191,9 +179,9 @@ async def generate_webhook_token(request: Request):
 
         if not merchant.webhook_token:
             merchant.webhook_token = secrets.token_urlsafe(32)
-            db.commit()
+            db2.commit()
 
         webhook_url = f"https://akdili.online/yalidine_webhook.php?token={merchant.webhook_token}"
         return JSONResponse({"token": merchant.webhook_token, "webhook_url": webhook_url})
     finally:
-        db.close()
+        db2.close()
