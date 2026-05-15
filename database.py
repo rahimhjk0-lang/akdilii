@@ -13,18 +13,34 @@ def build_engine(url_str: str):
     if "sqlite" in url_str:
         return create_engine(url_str, connect_args={"check_same_thread": False})
 
-    # PostgreSQL — نحلّل يدوياً
+    # PostgreSQL — نحلّل يدوياً مع دعم كامل لـ Supabase Pooler
     try:
-        parsed = urlparse(url_str)
+        # نستخرج الـ credentials يدوياً لتجنب مشكلة urlparse مع usernames فيها نقطة
+        # الشكل: postgresql://username:password@host:port/db
+        rest = url_str.split("://", 1)[1]                    # username:password@host:port/db
+        userinfo, hostinfo = rest.rsplit("@", 1)             # split من آخر @
+        raw_user, raw_pass = userinfo.split(":", 1)          # split من أول :
+        host_port, database = hostinfo.split("/", 1)         # split من أول /
+        if ":" in host_port:
+            host, port_str = host_port.rsplit(":", 1)
+            port = int(port_str)
+        else:
+            host = host_port
+            port = 5432
+
         engine_url = URL.create(
-            drivername  = "postgresql+psycopg2",
-            username    = unquote(parsed.username or "postgres"),
-            password    = unquote(parsed.password or ""),
-            host        = parsed.hostname,
-            port        = parsed.port or 5432,
-            database    = (parsed.path or "/postgres").lstrip("/") or "postgres",
+            drivername = "postgresql+psycopg2",
+            username   = unquote(raw_user),
+            password   = unquote(raw_pass),
+            host       = host,
+            port       = port,
+            database   = database or "postgres",
         )
-        return create_engine(engine_url, pool_pre_ping=True)
+        return create_engine(
+            engine_url,
+            pool_pre_ping=True,
+            connect_args={"sslmode": "require"},
+        )
     except Exception as e:
         raise RuntimeError(f"خطأ في رابط قاعدة البيانات: {e}")
 
