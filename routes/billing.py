@@ -15,6 +15,11 @@ from config import PLANS, CHARGILY_API_KEY, CHARGILY_WEBHOOK_SECRET, APP_URL
 from routes.auth import get_current_merchant
 
 router    = APIRouter(prefix="/billing")
+
+# alias route — /billing/subscribe يفتح نفس صفحة الاشتراك
+@router.get("/subscribe", response_class=HTMLResponse)
+async def billing_subscribe_alias(request: Request, db: Session = Depends(get_db), merchant: Merchant = Depends(get_current_merchant)):
+    return templates.TemplateResponse("billing.html", {"request": request, "merchant": merchant, "plans": PLANS})
 templates = Jinja2Templates(directory="templates")
 
 CHARGILY_API = "https://pay.chargily.net/api/v2"
@@ -117,12 +122,13 @@ async def chargily_webhook(request: Request, db: Session = Depends(get_db)):
 
     # التحقق من التوقيع
     if CHARGILY_WEBHOOK_SECRET:
-        expected = hmac.new(
+        import hmac as _hmac
+        expected = _hmac.new(
             CHARGILY_WEBHOOK_SECRET.encode(),
             body,
             hashlib.sha256
         ).hexdigest()
-        if not hmac.compare_digest(signature, expected):
+        if not _hmac.compare_digest(signature, expected):
             raise HTTPException(status_code=400, detail="Invalid signature")
 
     try:
