@@ -15,7 +15,7 @@ from routes.dashboard import router as dashboard_router
 from routes.admin     import router as admin_router
 from routes.billing   import router as billing_router
 from routes.webhook   import router as webhook_router
-from database import Base, engine
+
 
 # ══════════════════════════════════════════════════════════
 # ASGI CRC Middleware — يرد على crc_token قبل أي Router
@@ -59,8 +59,8 @@ app.add_middleware(CrcMiddleware)
 # ══════════════════════════════════════════════════════════
 # قاعدة البيانات
 # ══════════════════════════════════════════════════════════
-Base.metadata.create_all(bind=engine)
-print("✅ قاعدة البيانات جاهزة")
+from database import init_db
+init_db()
 
 # ══════════════════════════════════════════════════════════
 # Routers
