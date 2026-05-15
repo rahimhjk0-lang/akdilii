@@ -21,6 +21,7 @@ class Merchant(Base):
     sub_active    = Column(Boolean,  default=False)   # هل الاشتراك فعّال؟
     sub_expires   = Column(DateTime, nullable=True)    # تاريخ الانتهاء
     sub_plan      = Column(String(50), nullable=True)  # الباقة المدفوعة
+    webhook_token = Column(String(64), unique=True, nullable=True)  # token للـ PHP bridge
 
     carriers  = relationship("Carrier", back_populates="merchant", cascade="all, delete")
     parcels   = relationship("Parcel",  back_populates="merchant", cascade="all, delete")
