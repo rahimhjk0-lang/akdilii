@@ -78,6 +78,16 @@ def initial_sync(carrier_db, db=None) -> dict:
 
                     normalized = carrier_obj.normalize_status(raw_status) or "at_origin"
 
+                    phone = (
+                            p.get("contact_phone") or
+                            p.get("phone") or
+                            ""
+                        )
+                    # ✅ تخطى الطرود بدون رقم — ما تجيبهاش
+                    if not phone or phone == "0000000000":
+                        stats["skipped"] += 1
+                        continue
+
                     new_parcel = Parcel(
                         merchant_id     = carrier_db.merchant_id,
                         carrier_id      = carrier_db.id,
@@ -86,11 +96,8 @@ def initial_sync(carrier_db, db=None) -> dict:
                             (p.get("firstname", "") or "") + " " +
                             (p.get("familyname", "") or "")
                         ).strip() or "زبون",
-                        customer_phone  = (
-                            p.get("contact_phone") or
-                            p.get("phone") or
-                            "0000000000"
-                        ),
+                        customer_phone  = phone,
+
                         wilaya          = (
                             p.get("to_wilaya_name") or
                             p.get("last_update_wilaya") or ""

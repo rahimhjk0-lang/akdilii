@@ -27,9 +27,11 @@ async def dashboard(
     failed           = db.query(Parcel).filter(Parcel.merchant_id == merchant.id, Parcel.current_status == "failed_attempt").count()
     notifs_sent      = db.query(Notification).join(Parcel).filter(Parcel.merchant_id == merchant.id).count()
 
-    # آخر 10 طرود
+    # آخر 10 طرود شغالة فقط (بدون الراجعة والمسلمة)
     recent_parcels = db.query(Parcel).filter(
-        Parcel.merchant_id == merchant.id
+        Parcel.merchant_id == merchant.id,
+        Parcel.is_active == True,
+        Parcel.customer_phone != "0000000000"
     ).order_by(Parcel.updated_at.desc()).limit(10).all()
 
     plan_info = PLANS.get(merchant.plan, PLANS["starter"])

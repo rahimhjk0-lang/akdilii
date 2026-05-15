@@ -94,6 +94,9 @@ async def yalidine_webhook(request: Request):
             if n.get("whatsapp_sent"):
                 db.add(Notification(parcel_id=p.id, channel="whatsapp",
                     phone=p.customer_phone, message=f"[wh] {sf}", status="sent"))
+            # ✅ عداد الطلبات المستعملة
+            if merchant:
+                merchant.orders_used = (merchant.orders_used or 0) + 1
         db.commit()
         return JSONResponse({"ok": True, "action": "created", "tracking": tracking})
 
