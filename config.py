@@ -21,7 +21,8 @@ DATABASE_URL = _db_url.replace("postgres://", "postgresql://", 1) if _db_url.sta
 
 # ---- Chargily Pay ----
 CHARGILY_API_KEY        = os.getenv("CHARGILY_API_KEY", "live_sk_Ao6mTVrzLG1VYjKBy0c49tlYwRshIgRfvbIG0mUT")
-CHARGILY_WEBHOOK_SECRET = os.getenv("CHARGILY_WEBHOOK_SECRET", "")
+CHARGILY_WEBHOOK_SECRET  = os.getenv("CHARGILY_WEBHOOK_SECRET", "")
+YALIDINE_WEBHOOK_SECRET  = os.getenv("YALIDINE_WEBHOOK_SECRET", "0a7542f2570c4c2aee9576e954d95a69e46e520574a3e375f4d483e06e6273ef")
 APP_URL                 = os.getenv("APP_URL", "https://akdili.online")
 
 # ---- Green API واتساب ----
