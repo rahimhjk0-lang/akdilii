@@ -57,6 +57,25 @@ app = FastAPI(title="Akdili", version="1.0")
 app.add_middleware(CrcMiddleware)
 
 # ══════════════════════════════════════════════════════════
+# Exception Handler — 401 يحول لـ /login بدل JSON
+# ══════════════════════════════════════════════════════════
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
+from fastapi.responses import JSONResponse as _JSONResponse
+
+@app.exception_handler(FastAPIHTTPException)
+async def http_exception_handler(request: Request, exc: FastAPIHTTPException):
+    if exc.status_code == 401:
+        # API endpoints ترجع JSON، باقي الصفحات تحول لـ /login
+        if request.url.path.startswith("/api/"):
+            return _JSONResponse({"detail": "Unauthorized"}, status_code=401)
+        # احذف cookie قديم + حول لـ /login
+        response = RedirectResponse(url="/login", status_code=302)
+        response.delete_cookie("akdili_token")
+        return response
+    # باقي الأخطاء — رجّع JSON عادي
+    return _JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+
+# ══════════════════════════════════════════════════════════
 # قاعدة البيانات
 # ══════════════════════════════════════════════════════════
 from database import init_db
