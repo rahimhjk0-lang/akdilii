@@ -49,30 +49,31 @@ def init_db():
 
 
 def _run_migrations():
-    """يضيف columns جديدة للجداول الموجودة — آمن لأنه يستعمل IF NOT EXISTS"""
+    """يضيف columns جديدة للجداول الموجودة بطريقة آمنة"""
+    from sqlalchemy import text, inspect
+
     migrations = [
-        # webhook_token للـ PHP Bridge
-        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS webhook_token VARCHAR(64) UNIQUE",
-        # sub columns إذا ما كانوش موجودين
-        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS sub_active BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS sub_expires TIMESTAMP",
-        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS sub_plan VARCHAR(50)",
-        # api_id للـ Carrier
-        "ALTER TABLE carriers ADD COLUMN IF NOT EXISTS api_id TEXT",
+        ("merchants", "webhook_token", "VARCHAR(64)"),
+        ("merchants", "sub_active",    "BOOLEAN DEFAULT FALSE"),
+        ("merchants", "sub_expires",   "TIMESTAMP"),
+        ("merchants", "sub_plan",      "VARCHAR(50)"),
+        ("carriers",  "api_id",        "TEXT"),
     ]
-    conn = engine.raw_connection()
-    try:
-        cur = conn.cursor()
-        for sql in migrations:
+
+    insp = inspect(engine)
+    with engine.connect() as conn:
+        for table, col, col_type in migrations:
             try:
-                cur.execute(sql)
+                existing = [c["name"] for c in insp.get_columns(table)]
+                if col not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                    conn.commit()
+                    print(f"[MIGRATION] ✅ أضفنا {table}.{col}")
+                else:
+                    pass  # موجود مسبقاً
             except Exception as e:
-                print(f"[MIGRATION] تجاهل: {e}")
-        conn.commit()
-        print("✅ Migrations شغالة")
-    except Exception as e:
-        print(f"[MIGRATION] خطأ: {e}")
-        conn.rollback()
-    finally:
-        conn.close()
+                print(f"[MIGRATION] ⚠️ {table}.{col}: {e}")
+                try: conn.rollback()
+                except: pass
+    print("✅ Migrations شغالة")
 
