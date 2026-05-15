@@ -15,12 +15,12 @@ from config import PLANS, CHARGILY_API_KEY, CHARGILY_WEBHOOK_SECRET, APP_URL
 from routes.auth import get_current_merchant
 
 router    = APIRouter(prefix="/billing")
+templates = Jinja2Templates(directory="templates")
 
 # alias route — /billing/subscribe يفتح نفس صفحة الاشتراك
 @router.get("/subscribe", response_class=HTMLResponse)
 async def billing_subscribe_alias(request: Request, db: Session = Depends(get_db), merchant: Merchant = Depends(get_current_merchant)):
     return templates.TemplateResponse("billing.html", {"request": request, "merchant": merchant, "plans": PLANS})
-templates = Jinja2Templates(directory="templates")
 
 CHARGILY_API = "https://pay.chargily.net/api/v2"
 
