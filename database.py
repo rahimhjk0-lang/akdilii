@@ -41,6 +41,38 @@ def get_db():
 
 def init_db():
     from models import Merchant, Carrier, Parcel, TrackingEvent, Notification
+    # أنشئ الجداول الجديدة
     Base.metadata.create_all(bind=engine)
+    # تشغيل migrations يدوية للـ columns الجديدة
+    _run_migrations()
     print("✅ قاعدة البيانات جاهزة")
+
+
+def _run_migrations():
+    """يضيف columns جديدة للجداول الموجودة — آمن لأنه يستعمل IF NOT EXISTS"""
+    migrations = [
+        # webhook_token للـ PHP Bridge
+        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS webhook_token VARCHAR(64) UNIQUE",
+        # sub columns إذا ما كانوش موجودين
+        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS sub_active BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS sub_expires TIMESTAMP",
+        "ALTER TABLE merchants ADD COLUMN IF NOT EXISTS sub_plan VARCHAR(50)",
+        # api_id للـ Carrier
+        "ALTER TABLE carriers ADD COLUMN IF NOT EXISTS api_id TEXT",
+    ]
+    conn = engine.raw_connection()
+    try:
+        cur = conn.cursor()
+        for sql in migrations:
+            try:
+                cur.execute(sql)
+            except Exception as e:
+                print(f"[MIGRATION] تجاهل: {e}")
+        conn.commit()
+        print("✅ Migrations شغالة")
+    except Exception as e:
+        print(f"[MIGRATION] خطأ: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
