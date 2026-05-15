@@ -46,7 +46,7 @@
             </button>
         {% else %}
             <p class="text-muted small mb-3">{{ info.name }} — اربط حسابك</p>
-            <button class="btn btn-primary-custom w-100 btn-sm" onclick="openCarrierModal('{{ code }}', {{ info | tojson }})">
+            <button class="btn btn-primary-custom w-100 btn-sm" onclick="openCarrierModal('{{ code }}', carrierConfigs['{{ code }}'] || {})">
                 <i class="fas fa-link ms-1"></i> ربط {{ info.name }}
             </button>
         {% endif %}
