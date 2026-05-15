@@ -29,10 +29,10 @@
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
             <div class="small text-muted">الطلبات المستخدمة</div>
             <div class="fw-700 fs-5" style="color:#6b5a45;">
-                {{ merchant.orders_used }} / {{ plans[merchant.sub_plan if merchant.sub_plan else merchant.plan]['orders'] }}
+                {{ merchant.orders_used }} / {{ plans.get(merchant.sub_plan if merchant.sub_plan else merchant.plan, plans['starter'])['orders'] }}
             </div>
             <div class="progress mt-1" style="height:6px;border-radius:4px;">
-                {% set used_pct = (merchant.orders_used / plans[merchant.sub_plan if merchant.sub_plan else merchant.plan]['orders'] * 100)|int %}
+                {% set used_pct = (merchant.orders_used / plans.get(merchant.sub_plan if merchant.sub_plan else merchant.plan, plans['starter'])['orders'] * 100)|int %}
                 <div class="progress-bar" style="width:{{ [used_pct, 100]|min }}%;background:#c9a96e;border-radius:4px;"></div>
             </div>
         </div>
