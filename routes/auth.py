@@ -23,6 +23,15 @@ def create_token(merchant_id: int) -> str:
     expire = datetime.utcnow() + timedelta(days=30)
     return jwt.encode({"sub": str(merchant_id), "exp": expire}, SECRET_KEY, algorithm="HS256")
 
+def verify_token(token: str):
+    """يفك تشفير الـ JWT ويرجع بيانات التاجر أو None"""
+    try:
+        payload     = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        merchant_id = int(payload.get("sub"))
+        return {"id": merchant_id}
+    except Exception:
+        return None
+
 def get_current_merchant(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("akdili_token")
     if not token:
