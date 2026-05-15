@@ -157,7 +157,7 @@ async def merchant_by_token(token: str = None):
 # ============================================================
 # /api/generate-webhook-token — يولد token للتاجر
 # ============================================================
-@router.post("/api/generate-webhook-token")
+@router.api_route("/api/generate-webhook-token", methods=["GET", "POST"])
 async def generate_webhook_token(request: Request):
     """يولد webhook_token جديد للتاجر"""
     import secrets
