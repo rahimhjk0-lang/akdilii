@@ -28,12 +28,18 @@
         </div>
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
             <div class="small text-muted">الطلبات المستخدمة</div>
+            {% set cur_plan = plans.get(merchant.sub_plan if merchant.sub_plan else merchant.plan, plans['starter']) %}
+            {% set max_orders = cur_plan['orders'] %}
             <div class="fw-700 fs-5" style="color:#6b5a45;">
-                {{ merchant.orders_used }} / {{ plans.get(merchant.sub_plan if merchant.sub_plan else merchant.plan, plans['starter'])['orders'] }}
+                {{ merchant.orders_used }} / {% if max_orders == -1 %}∞{% else %}{{ max_orders }}{% endif %}
             </div>
             <div class="progress mt-1" style="height:6px;border-radius:4px;">
-                {% set used_pct = (merchant.orders_used / plans.get(merchant.sub_plan if merchant.sub_plan else merchant.plan, plans['starter'])['orders'] * 100)|int %}
+                {% if max_orders == -1 %}
+                <div class="progress-bar" style="width:15%;background:#c9a96e;border-radius:4px;"></div>
+                {% else %}
+                {% set used_pct = ((merchant.orders_used / max_orders) * 100)|int %}
                 <div class="progress-bar" style="width:{{ [used_pct, 100]|min }}%;background:#c9a96e;border-radius:4px;"></div>
+                {% endif %}
             </div>
         </div>
     </div>
