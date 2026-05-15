@@ -41,11 +41,15 @@ def get_db():
 
 def init_db():
     from models import Merchant, Carrier, Parcel, TrackingEvent, Notification
-    # أنشئ الجداول الجديدة
-    Base.metadata.create_all(bind=engine)
-    # تشغيل migrations يدوية للـ columns الجديدة
-    _run_migrations()
-    print("✅ قاعدة البيانات جاهزة")
+    try:
+        # أنشئ الجداول الجديدة
+        Base.metadata.create_all(bind=engine)
+        # تشغيل migrations يدوية للـ columns الجديدة
+        _run_migrations()
+        print("✅ قاعدة البيانات جاهزة")
+    except Exception as e:
+        print(f"⚠️ تحذير قاعدة البيانات: {e}")
+        print("⚠️ السيرفر سيشتغل لكن قاعدة البيانات غير متصلة — تحقق من DATABASE_URL")
 
 
 def _run_migrations():
