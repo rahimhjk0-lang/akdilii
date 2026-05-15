@@ -118,3 +118,82 @@ def _extract(payload):
         "location":       d.get("to_wilaya_name") or d.get("last_update_wilaya") or d.get("wilaya") or "",
         "delivery_type":  "home" if d.get("product_list") or d.get("delivery_type") == "home" else "office",
     }
+
+
+# ============================================================
+# /api/merchant-by-token — للـ PHP Bridge
+# ============================================================
+@router.get("/api/merchant-by-token")
+async def merchant_by_token(token: str = None, db=None):
+    """يرجع بيانات التاجر للـ PHP Bridge بواسطة webhook_token"""
+    from fastapi import Depends
+    from database import get_db
+    from models import Merchant, Carrier
+
+    if not token:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"error": "missing token"}, status_code=400)
+
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        merchant = db.query(Merchant).filter(Merchant.webhook_token == token).first()
+        if not merchant:
+            return JSONResponse({"error": "not found"}, status_code=404)
+
+        # جيب Green API credentials من الـ env (مشترك لكل التجار حالياً)
+        import os
+        carrier = db.query(Carrier).filter(
+            Carrier.merchant_id == merchant.id,
+            Carrier.carrier_code == "yalidine",
+            Carrier.is_connected == True
+        ).first()
+
+        return JSONResponse({
+            "id":          merchant.id,
+            "name":        merchant.name,
+            "wa_instance": os.getenv("GREEN_API_INSTANCE", ""),
+            "wa_token":    os.getenv("GREEN_API_TOKEN", ""),
+            "carrier_id":  carrier.id if carrier else None,
+        })
+    finally:
+        db.close()
+
+
+# ============================================================
+# /api/generate-webhook-token — يولد token للتاجر
+# ============================================================
+@router.post("/api/generate-webhook-token")
+async def generate_webhook_token(request: Request):
+    """يولد webhook_token جديد للتاجر"""
+    import secrets
+    from database import SessionLocal
+    from models import Merchant
+    from routes.auth import get_current_merchant
+    from database import get_db
+    from fastapi import Depends
+
+    # simple auth via cookie
+    from routes.auth import verify_token
+    t = request.cookies.get("akdili_token")
+    if not t:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    merchant_data = verify_token(t)
+    if not merchant_data:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    db = SessionLocal()
+    try:
+        merchant = db.query(Merchant).filter(Merchant.id == merchant_data["id"]).first()
+        if not merchant:
+            return JSONResponse({"error": "not found"}, status_code=404)
+
+        if not merchant.webhook_token:
+            merchant.webhook_token = secrets.token_urlsafe(32)
+            db.commit()
+
+        webhook_url = f"https://akdili.online/yalidine_webhook.php?token={merchant.webhook_token}"
+        return JSONResponse({"token": merchant.webhook_token, "webhook_url": webhook_url})
+    finally:
+        db.close()
