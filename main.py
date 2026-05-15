@@ -7,14 +7,19 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.types import ASGIApp
+
+# ── Imports للـ Routers ──────────────────────────────────
+from routes.auth      import router as auth_router
+from routes.dashboard import router as dashboard_router
+from routes.admin     import router as admin_router
+from routes.billing   import router as billing_router
+from routes.webhook   import router as webhook_router
+from database import Base, engine
 
 # ══════════════════════════════════════════════════════════
 # ASGI CRC Middleware — يرد على crc_token قبل أي Router
 # ══════════════════════════════════════════════════════════
-import json as _json
-from starlette.types import ASGIApp, Scope, Receive, Send
-from starlette.responses import Response
-
 class CrcMiddleware:
     def __init__(self, app: ASGIApp):
         self.app = app
@@ -30,7 +35,6 @@ class CrcMiddleware:
 
             if crc:
                 print(f"[CRC] crc_token={repr(crc)}")
-                # Yalidine docs: echo crc_token as plain text directly
                 body = crc.encode("utf-8")
                 await send({"type": "http.response.start",
                             "status": 200,
@@ -42,26 +46,25 @@ class CrcMiddleware:
                 return
 
         await self.app(scope, receive, send)
+
+
+# ══════════════════════════════════════════════════════════
+# إنشاء التطبيق
+# ══════════════════════════════════════════════════════════
+app = FastAPI(title="Akdili", version="1.0")
+
+# أضف Middleware بعد إنشاء app
 app.add_middleware(CrcMiddleware)
 
+# ══════════════════════════════════════════════════════════
+# قاعدة البيانات
+# ══════════════════════════════════════════════════════════
+Base.metadata.create_all(bind=engine)
+print("✅ قاعدة البيانات جاهزة")
 
-# ── Yalidine Backup Routes ────────────────────────────────
-@app.get("/verify_yali_2026")
-async def yali_verify(request: Request):
-    crc = request.query_params.get("crc_token", "")
-    print(f"[VERIFY] crc_token={repr(crc)}")
-    return {"crc_token": crc}
-
-# ── Yalidine Webhook Validation (/check) ──────────────────
-@app.get("/check")
-async def yalidine_check(request: Request):
-    crc = request.query_params.get("crc_token", "")
-    print(f"[CHECK] crc_token={repr(crc)}")
-    return {"crc_token": crc}
-
-
-
-# routes
+# ══════════════════════════════════════════════════════════
+# Routers
+# ══════════════════════════════════════════════════════════
 app.include_router(auth_router)
 app.include_router(dashboard_router)
 app.include_router(admin_router)
@@ -70,6 +73,9 @@ app.include_router(webhook_router)
 
 templates = Jinja2Templates(directory="templates")
 
+# ══════════════════════════════════════════════════════════
+# Routes أساسية
+# ══════════════════════════════════════════════════════════
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     token = request.cookies.get("akdili_token")
@@ -81,9 +87,52 @@ async def home(request: Request):
 async def health():
     return {"status": "OK", "app": "Akdili"}
 
-# ==========================================
+# ── Yalidine Backup Routes (fallback) ─────────────────────
+@app.get("/verify_yali_2026")
+async def yali_verify(request: Request):
+    crc = request.query_params.get("crc_token", "")
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(crc)
+
+@app.get("/check")
+async def yalidine_check(request: Request):
+    crc = request.query_params.get("crc_token", "")
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(crc)
+
+# ══════════════════════════════════════════════════════════
+# Scheduler
+# ══════════════════════════════════════════════════════════
+from scheduler import start_scheduler
+
+@app.on_event("startup")
+async def startup_event():
+    start_scheduler()
+    print("🚀 Akdili شغال!")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    from scheduler import stop_scheduler
+    stop_scheduler()
+
+# ══════════════════════════════════════════════════════════
+# Keep-alive ping (Render free tier)
+# ══════════════════════════════════════════════════════════
+def _keep_alive():
+    url = os.getenv("APP_URL", "https://akdilii.onrender.com") + "/health"
+    while True:
+        time.sleep(840)  # كل 14 دقيقة
+        try:
+            requests.get(url, timeout=10)
+            print("💓 Keep-alive ping")
+        except Exception:
+            pass
+
+threading.Thread(target=_keep_alive, daemon=True).start()
+
+# ══════════════════════════════════════════════════════════
 # تشغيل مباشر
-# ==========================================
+# ══════════════════════════════════════════════════════════
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
