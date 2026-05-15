@@ -167,10 +167,8 @@ async def connect_carrier(
 
     # ✅ ولّد webhook_token تلقائياً للتاجر إن ما كانش عنده
     import secrets
-    from models import Merchant
-    the_merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
-    if the_merchant and not the_merchant.webhook_token:
-        the_merchant.webhook_token = secrets.token_urlsafe(32)
+    if merchant and not merchant.webhook_token:
+        merchant.webhook_token = secrets.token_urlsafe(32)
         db.commit()
 
     # ✅ Magic Sync — نشغله في background thread باش ما يوقفش الـ response
