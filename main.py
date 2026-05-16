@@ -165,6 +165,19 @@ def _keep_alive():
 
 threading.Thread(target=_keep_alive, daemon=True).start()
 
+def _keep_db_alive():
+    while True:
+        time.sleep(240)
+        try:
+            from database import engine
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception:
+            pass
+
+threading.Thread(target=_keep_db_alive, daemon=True).start()
+
 # ══════════════════════════════════════════════════════════
 # تشغيل مباشر
 # ══════════════════════════════════════════════════════════
