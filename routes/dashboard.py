@@ -364,3 +364,31 @@ async def sync_parcels_now(
 
     threading.Thread(target=_run, daemon=True).start()
     return JSONResponse({"success": True, "message": "🔄 المزامنة بدأت في الخلفية — حدّث الصفحة بعد دقيقة"})
+
+
+# ============================================================
+# حذف طرد
+# ============================================================
+@router.post("/parcels/delete")
+async def delete_parcel(
+    request:  Request,
+    db:       Session  = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    try:
+        body = await request.json()
+        parcel_id = int(body.get("parcel_id", 0))
+    except Exception:
+        return JSONResponse({"ok": False, "msg": "بيانات غلطة"})
+
+    parcel = db.query(Parcel).filter(
+        Parcel.id == parcel_id,
+        Parcel.merchant_id == merchant.id  # التاجر يحذف غير طرودو
+    ).first()
+
+    if not parcel:
+        return JSONResponse({"ok": False, "msg": "الطرد مش موجود"})
+
+    db.delete(parcel)
+    db.commit()
+    return JSONResponse({"ok": True})
