@@ -12,6 +12,112 @@ logger = logging.getLogger("akdili-webhook")
 router = APIRouter(tags=["webhook"])
 
 
+# ── GET/POST: /yalidine_webhook.php — توافق مع PHP Bridge القديم ──────────
+@router.get("/yalidine_webhook.php")
+async def php_bridge_validate(request: Request, crc_token: Optional[str] = None, token: Optional[str] = None):
+    """يرد على CRC validation من Yalidine"""
+    from fastapi.responses import PlainTextResponse
+    if crc_token:
+        print(f"[PHP-BRIDGE] CRC: {repr(crc_token)}")
+        return PlainTextResponse(crc_token)
+    return PlainTextResponse("ok")
+
+@router.post("/yalidine_webhook.php")
+async def php_bridge_webhook(request: Request, token: Optional[str] = None):
+    """يستقبل webhooks من Yalidine ويعالجها مباشرة"""
+    try:
+        payload = await request.json()
+        print(f"[PHP-BRIDGE] POST token={token} body={str(payload)[:200]}")
+    except Exception:
+        payload = {}
+
+    if not payload:
+        return JSONResponse({"status": "ok"})
+
+    db = SessionLocal()
+    try:
+        # نحدد التاجر من الـ token
+        merchant = None
+        carrier_db = None
+
+        if token:
+            merchant = db.query(Merchant).filter(Merchant.webhook_token == token).first()
+            if merchant:
+                carrier_db = db.query(Carrier).filter(
+                    Carrier.merchant_id == merchant.id,
+                    Carrier.carrier_code == "yalidine",
+                    Carrier.is_connected == True
+                ).first()
+
+        if not carrier_db:
+            # fallback — أول carrier yalidine متصل
+            carrier_db = db.query(Carrier).filter(
+                Carrier.carrier_code == "yalidine",
+                Carrier.is_connected == True
+            ).first()
+            if carrier_db:
+                merchant = db.query(Merchant).filter(Merchant.id == carrier_db.merchant_id).first()
+
+        if not carrier_db:
+            return JSONResponse({"ok": False, "reason": "no carrier"})
+
+        from carriers.yalidine import YalidineCarrier
+        carrier_obj = YalidineCarrier(
+            api_key=carrier_db.api_key or "",
+            api_id=getattr(carrier_db, "api_id", "") or ""
+        )
+
+        parcel_data = _extract(payload)
+        if not parcel_data:
+            return JSONResponse({"ok": True, "reason": "no parcel data"})
+
+        tracking   = parcel_data["tracking"]
+        new_status = carrier_obj.normalize_status(parcel_data["raw_status"])
+        location   = parcel_data.get("location", "")
+        print(f"[PHP-BRIDGE] {tracking} -> {new_status}")
+
+        existing = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
+
+        if existing:
+            if new_status and new_status != existing.current_status:
+                _update_parcel_and_notify(db, existing, new_status, location, source="php-bridge")
+                db.commit()
+            return JSONResponse({"ok": True, "tracking": tracking})
+
+        # طرد جديد
+        phone = parcel_data.get("customer_phone", "")
+        sf = new_status or "at_origin"
+        p = Parcel(
+            merchant_id=carrier_db.merchant_id, carrier_id=carrier_db.id,
+            tracking_number=tracking,
+            customer_name=parcel_data.get("customer_name", "زبون"),
+            customer_phone=phone or "0000000000",
+            wilaya=location, delivery_type=parcel_data.get("delivery_type", "home"),
+            current_status=sf, is_active=sf not in {"delivered", "returned"},
+        )
+        db.add(p); db.flush()
+        db.add(TrackingEvent(parcel_id=p.id, status=sf, location=location,
+                             description=f"[php-bridge] {parcel_data['raw_status']}"))
+        if phone and phone != "0000000000":
+            n = notify_customer(phone=phone, tracking_number=tracking,
+                                status=sf, delivery_type=p.delivery_type,
+                                merchant_name=merchant.name if merchant else "")
+            if n.get("whatsapp_sent"):
+                db.add(Notification(parcel_id=p.id, channel="whatsapp",
+                    phone=phone, message=f"[php-bridge] {sf}", status="sent"))
+            if merchant:
+                merchant.orders_used = (merchant.orders_used or 0) + 1
+        db.commit()
+        return JSONResponse({"ok": True, "action": "created", "tracking": tracking})
+
+    except Exception as e:
+        db.rollback()
+        print(f"[PHP-BRIDGE] error: {e}")
+        return JSONResponse({"ok": False, "error": str(e)})
+    finally:
+        db.close()
+
+
 # ── GET: Yalidine validation ─────────────────────────────────
 @router.get("/webhook/yalidine")
 async def yalidine_validate(crc_token: Optional[str] = None):
